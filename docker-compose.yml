@@ -40,7 +40,7 @@ services:
       dockerfile: Dockerfile
     container_name: building_admin-nginx-django-api
     ports:
-      - "8018:80"
+      - "8020:80"
     depends_on:
       - db
       - web
