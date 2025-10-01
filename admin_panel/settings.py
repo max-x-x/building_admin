@@ -26,6 +26,8 @@ include(
     'components/static.py',
 )
 
+CORS_ALLOW_ALL_ORIGINS = True
+
 ROOT_URLCONF = "admin_panel.urls"
 
 WSGI_APPLICATION = "admin_panel.wsgi.application"
