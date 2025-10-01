@@ -1,0 +1,657 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Пользователи - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>👥 Управление пользователями</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 3rem;">
+        Просмотр и управление пользователями системы
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Статистика пользователей</h2>
+      <div class="users-stats">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div class="stat-number">{{ total_users }}</div>
+          <div class="stat-label">Всего пользователей</div>
+        </div>
+        <div class="stat-card ssk-card">
+          <div class="stat-icon">🏗️</div>
+          <div class="stat-number">{{ ssk_count }}</div>
+          <div class="stat-label">ССК</div>
+        </div>
+        <div class="stat-card iko-card">
+          <div class="stat-icon">🔍</div>
+          <div class="stat-number">{{ iko_count }}</div>
+          <div class="stat-label">ИКО</div>
+        </div>
+        <div class="stat-card prorab-card">
+          <div class="stat-icon">👷</div>
+          <div class="stat-number">{{ prorab_count }}</div>
+          <div class="stat-label">Прораб</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>🔍 Поиск и фильтрация</h2>
+      <form method="GET" class="search-form">
+        <div class="search-controls">
+          <div class="search-input-group">
+            <input list="users-suggestions" type="text" name="search" placeholder="Поиск по ФИО или email..." value="{{ search_query }}" class="search-input">
+            <datalist id="users-suggestions">
+              {% for u in users %}
+                {% if u.fio %}<option value="{{ u.fio }}">{% endif %}
+                {% if u.email %}<option value="{{ u.email }}">{% endif %}
+              {% endfor %}
+            </datalist>
+            <button type="submit" class="btn btn-accent">
+              🔍 Поиск
+            </button>
+          </div>
+          <div class="filter-group">
+            <select name="role" class="role-filter">
+              <option value="all" {% if current_role == 'all' %}selected{% endif %}>Все роли</option>
+              <option value="ССК" {% if current_role == 'ССК' %}selected{% endif %}>ССК</option>
+              <option value="ИКО" {% if current_role == 'ИКО' %}selected{% endif %}>ИКО</option>
+              <option value="Прораб" {% if current_role == 'Прораб' %}selected{% endif %}>Прораб</option>
+              <option value="Админ" {% if current_role == 'Админ' %}selected{% endif %}>Админ</option>
+            </select>
+            <button type="submit" class="btn btn-primary">
+              🔄 Применить
+            </button>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>👥 Список пользователей</h2>
+      <div class="users-grid">
+        {% for user in users %}
+        <div class="user-card" data-id="{{ user.id }}" data-fio="{{ user.fio }}" data-email="{{ user.email }}" data-role="{{ user.role }}" data-rolekey="{{ user.role_key }}" data-phone="{{ user.phone|default:'' }}" onclick="openUserDetail(this)">
+          <div class="user-header">
+            <div class="user-avatar">
+              {{ user.fio|first }}
+            </div>
+            <div class="user-info">
+              <div class="user-name">{{ user.fio }}</div>
+              <div class="user-email">{{ user.email }}</div>
+            </div>
+            <div class="user-status">
+              {% if user.status == 'active' %}
+                <span class="status-badge active">🟢 Активен</span>
+              {% else %}
+                <span class="status-badge inactive">🔴 Неактивен</span>
+              {% endif %}
+            </div>
+          </div>
+          
+          <div class="user-role">
+            <span class="role-badge role-{{ user.role|lower }}">{{ user.role }}</span>
+          </div>
+          
+          <div class="user-stats">
+            <div class="stat-item">
+              <div class="stat-icon">🏗️</div>
+              <div class="stat-value">{{ user.objects_count }}</div>
+              <div class="stat-label">Объектов</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-icon">⚠️</div>
+              <div class="stat-value">{{ user.violations_count }}</div>
+              <div class="stat-label">Нарушений</div>
+            </div>
+          </div>
+          
+          <div class="user-footer">
+            <div class="click-hint">👆 Нажмите для подробностей</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+          <div class="empty-icon">👥</div>
+          <div class="empty-title">Пользователи не найдены</div>
+          <div class="empty-description">Попробуйте изменить параметры поиска</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        ← Назад к дашборду
+      </a>
+    </div>
+  </div>
+
+  <!-- Модальное окно детального просмотра пользователя -->
+  <div id="userDetailModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 id="modalUserName">Детальная информация</h2>
+        <button class="close-btn" onclick="closeUserDetail()">&times;</button>
+      </div>
+      <div class="modal-body" id="modalUserContent">
+        <!-- Контент будет загружен через JavaScript -->
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .users-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: center;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .stat-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--brand-orange);
+    }
+
+    .ssk-card::before {
+      background: #3b82f6;
+    }
+
+    .iko-card::before {
+      background: var(--accent-green);
+    }
+
+    .prorab-card::before {
+      background: var(--warn-yellow);
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .ssk-card .stat-number {
+      color: #3b82f6;
+    }
+
+    .iko-card .stat-number {
+      color: var(--accent-green);
+    }
+
+    .prorab-card .stat-number {
+      color: var(--warn-yellow);
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .search-form {
+      margin: 2rem 0;
+    }
+
+    .search-controls {
+      display: flex;
+      gap: 2rem;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-input-group {
+      display: flex;
+      gap: 1rem;
+      flex: 1;
+      min-width: 300px;
+    }
+
+    .search-input {
+      flex: 1;
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      color: var(--text-primary);
+      font-size: 1rem;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--brand-orange);
+      box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.1);
+    }
+
+    .filter-group {
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+
+    .role-filter {
+      padding: 1rem;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--chip-bg);
+      color: var(--text-primary);
+      font-size: 1rem;
+      min-width: 150px;
+    }
+
+    .users-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .user-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .user-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-primary);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .user-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .user-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .user-header {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .user-avatar {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      background: var(--gradient-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: white;
+    }
+
+    .user-info {
+      flex: 1;
+    }
+
+    .user-name {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .user-email {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .user-status {
+      margin-left: auto;
+    }
+
+    .status-badge {
+      padding: 0.25rem 0.75rem;
+      border-radius: 12px;
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+
+    .status-badge.active {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--accent-green);
+    }
+
+    .status-badge.inactive {
+      background: rgba(239, 68, 68, 0.1);
+      color: var(--danger-red);
+    }
+
+    .user-role {
+      margin-bottom: 1rem;
+    }
+
+    .role-badge {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .role-сск {
+      background: rgba(59, 130, 246, 0.1);
+      color: #3b82f6;
+    }
+
+    .role-ико {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--accent-green);
+    }
+
+    .role-прораб {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--warn-yellow);
+    }
+
+    .user-stats {
+      display: flex;
+      gap: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-item {
+      text-align: center;
+    }
+
+    .stat-item .stat-icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-value {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.25rem;
+    }
+
+    .stat-label {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .user-footer {
+      border-top: 1px solid var(--border-color);
+      padding-top: 1rem;
+      text-align: center;
+    }
+
+    .last-login {
+      color: var(--text-muted);
+      font-size: 0.85rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .click-hint {
+      color: var(--text-muted);
+      font-size: 0.8rem;
+      font-style: italic;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--chip-bg);
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+    }
+
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-description {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+    }
+
+    /* Модальное окно */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: var(--panel-bg);
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 600px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-panel);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h2 {
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: var(--text-secondary);
+      cursor: pointer;
+      padding: 0;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .close-btn:hover {
+      background: var(--chip-bg);
+      color: var(--text-primary);
+    }
+
+    .modal-body {
+      padding: 2rem;
+    }
+
+    .user-detail-info {
+      margin-bottom: 2rem;
+    }
+
+    .detail-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .detail-row:last-child {
+      border-bottom: none;
+    }
+
+    .detail-label {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .detail-value {
+      color: var(--text-secondary);
+    }
+
+    .objects-list {
+      margin-top: 1rem;
+    }
+
+    .object-item {
+      background: var(--chip-bg);
+      padding: 0.75rem 1rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 768px) {
+      .search-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .search-input-group {
+        min-width: auto;
+      }
+
+      .users-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .user-stats {
+        gap: 1rem;
+      }
+
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+      }
+    }
+  </style>
+
+  <script>
+    const API_USERS = {{ api_users_json|safe }};
+    async function openUserDetail(cardEl) {
+      const modal = document.getElementById('userDetailModal');
+      const userName = document.getElementById('modalUserName');
+      const userContent = document.getElementById('modalUserContent');
+
+      const id = cardEl.dataset.id;
+      const apiUser = (API_USERS || []).find(u => String(u.id) === String(id)) || {};
+      userName.textContent = apiUser.full_name || cardEl.dataset.fio || 'Пользователь';
+
+      const data = apiUser && Object.keys(apiUser).length ? apiUser : {
+        id: cardEl.dataset.id || '',
+        full_name: cardEl.dataset.fio || '',
+        email: cardEl.dataset.email || '',
+        phone: cardEl.dataset.phone || '',
+        role: cardEl.dataset.role_key || cardEl.dataset.role || ''
+      };
+
+      const rows = Object.keys(data).map(k => {
+        const labelMap = {id: 'ID', full_name: 'ФИО', email: 'Email', phone: 'Телефон', role: 'Роль', role_key: 'Код роли'};
+        const label = labelMap[k] || k;
+        const value = data[k] || '—';
+        return `<div class="detail-row"><span class="detail-label">${label}:</span><span class="detail-value">${value}</span></div>`;
+      }).join('');
+      userContent.innerHTML = `<div class="user-detail-info">${rows}</div>`;
+      modal.style.display = 'block';
+    }
+
+    function closeUserDetail() {
+      document.getElementById('userDetailModal').style.display = 'none';
+    }
+
+    // Закрытие модального окна при клике вне его
+    window.onclick = function(event) {
+      const modal = document.getElementById('userDetailModal');
+      if (event.target === modal) {
+        closeUserDetail();
+      }
+    }
+
+    // Анимация появления карточек
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.user-card, .stat-card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.5s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });
+  </script>
+</body>
+</html>

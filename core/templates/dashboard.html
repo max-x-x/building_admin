@@ -1,0 +1,643 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Космическая Админ Панель - Дашборд</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>🚀 Космическая Админ Панель</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 3rem;">
+        Добро пожаловать в центр управления космическими операциями
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Статистика системы</h2>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-number">342</div>
+          <div class="stat-label">Задач выполнено</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🏗️</div>
+          <div class="stat-number">89</div>
+          <div class="stat-label">Объектов в работе</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-number">156</div>
+          <div class="stat-label">Всего нарушений</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-number">89</div>
+          <div class="stat-label">Всего поставок</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem;">
+        <h2>🔧 Статус модулей</h2>
+        <button class="btn btn-accent" onclick="checkModuleStatus()" id="status-check-btn">
+          🔄 Обновить статус
+        </button>
+      </div>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0;">
+        {% for s in services_status %}
+        <div class="module-status">
+          <div class="module-icon">{{ s.icon }}</div>
+          <div class="module-name">{{ s.name }}</div>
+          {% if s.is_working is None %}
+            <div class="module-indicator">Нет данных</div>
+          {% elif s.is_working %}
+            <div class="module-indicator online">🟢 Работает</div>
+          {% else %}
+            <div class="module-indicator offline">🔴 Не работает</div>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>🎛️ Панель управления</h2>
+      <div class="dashboard-grid">
+        <a href="{% url 'invitations' %}" class="dashboard-card">
+          <div class="card-icon">📧</div>
+          <h3>Приглашения</h3>
+          <p>Отправка приглашений новым пользователям</p>
+          <div class="card-status chip chip-warning">{{ today_invitations }} сегодня</div>
+        </a>
+
+        <a href="{% url 'objects' %}" class="dashboard-card">
+          <div class="card-icon">🏗️</div>
+          <h3>Объекты</h3>
+          <p>Управление строительными объектами</p>
+          <div class="card-status chip chip-success">89 активных</div>
+        </a>
+
+        <a href="{% url 'logs' %}" class="dashboard-card">
+          <div class="card-icon">📊</div>
+          <h3>Логи системы</h3>
+          <p>Мониторинг и анализ событий</p>
+          <div class="card-status chip chip-warning">{{ today_logs }} сегодня</div>
+        </a>
+
+        <a href="{% url 'notifications' %}" class="dashboard-card">
+          <div class="card-icon">🔔</div>
+          <h3>Уведомления</h3>
+          <p>Отправка системных уведомлений</p>
+          <div class="card-status chip chip-success">{{ today_notifications }} сегодня</div>
+        </a>
+
+        <a href="{% url 'users' %}" class="dashboard-card">
+          <div class="card-icon">👥</div>
+          <h3>Пользователи</h3>
+          <p>Управление пользователями системы</p>
+          <div class="card-status chip chip-success">{{ total_users }} всего</div>
+        </a>
+
+        <a href="{% url 'visits' %}" class="dashboard-card">
+          <div class="card-icon">📍</div>
+          <h3>Посещения</h3>
+          <p>Отслеживание посещений объектов</p>
+          <div class="card-status chip chip-warning">156 сегодня</div>
+        </a>
+
+        <a href="{% url 'memos' %}" class="dashboard-card">
+          <div class="card-icon">📝</div>
+          <h3>Памятки</h3>
+          <p>Система заметок и напоминаний</p>
+          <div class="card-status chip chip-success">{{ total_memos }} всего</div>
+        </a>
+
+    <a href="{% url 'laboratory' %}" class="dashboard-card">
+      <div class="card-icon">🧪</div>
+      <h3>Лаборатория</h3>
+      <p>Экспериментальные функции и тестирование</p>
+      <div class="card-status chip chip-danger">12 нарушений</div>
+    </a>
+    
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>⚡ Быстрые действия</h2>
+      <div class="quick-actions">
+        <button class="btn btn-accent">
+          📊 Генерация общих отчетов
+        </button>
+        
+        <a href="{% url 'maintenance' %}" class="btn btn-warn">
+          🔧 Техническое обслуживание
+        </a>
+        
+        <a href="{% url 'logout' %}" class="btn btn-danger">
+          🚪 Выйти из системы
+        </a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Аналитика и диаграммы</h2>
+      <div class="charts-grid">
+        <div class="chart-container">
+          <h3>📈 Выполненные работы</h3>
+          <div class="chart" id="worksChart">
+            <canvas id="worksCanvas" width="300" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <h3>⚠️ Нарушения по объектам</h3>
+          <div class="chart" id="violationsChart">
+            <canvas id="violationsCanvas" width="300" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <h3>🧪 Лабораторные данные</h3>
+          <div class="chart" id="labChart">
+            <canvas id="labCanvas" width="300" height="200"></canvas>
+          </div>
+        </div>
+        
+        <div class="chart-container">
+          <h3>🔗 Нарушения vs Работы</h3>
+          <div class="chart" id="correlationChart">
+            <canvas id="correlationCanvas" width="300" height="200"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .stat-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .dashboard-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 2rem;
+      text-decoration: none;
+      color: inherit;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .dashboard-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-primary);
+      transform: scaleX(0);
+      transition: transform 0.3s ease;
+    }
+
+    .dashboard-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .dashboard-card:hover::before {
+      transform: scaleX(1);
+    }
+
+    .card-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .dashboard-card h3 {
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      font-size: 1.3rem;
+    }
+
+    .dashboard-card p {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+      line-height: 1.5;
+    }
+
+    .card-status {
+      position: absolute;
+      top: 1rem;
+      right: 1rem;
+    }
+
+    .quick-actions {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+      margin: 2rem 0;
+    }
+
+    .module-status {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .module-status:hover {
+      transform: translateY(-3px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .module-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .module-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .module-indicator {
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+
+    .module-indicator.online {
+      color: var(--accent-green);
+    }
+
+    .module-indicator.offline {
+      color: var(--danger-red);
+    }
+
+    .charts-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 2rem;
+      margin-top: 2rem;
+    }
+
+    .chart-container {
+      background: var(--panel-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .chart-container:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+    }
+
+    .chart-container h3 {
+      color: var(--text-primary);
+      margin: 0 0 1rem 0;
+      font-size: 1.1rem;
+      font-weight: 600;
+    }
+
+    .chart {
+      position: relative;
+      height: 200px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .chart canvas {
+      max-width: 100%;
+      max-height: 100%;
+    }
+
+    @media (max-width: 768px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+      
+      .quick-actions {
+        flex-direction: column;
+      }
+      
+      .quick-actions .btn {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    // Анимация появления карточек
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.dashboard-card, .stat-card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.6s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+    });
+
+    // Эффект пульсации для кнопки
+    setInterval(() => {
+      const pulseBtn = document.querySelector('.pulse');
+      if (pulseBtn) {
+        pulseBtn.style.animation = 'none';
+        setTimeout(() => {
+          pulseBtn.style.animation = 'pulse 2s infinite';
+        }, 10);
+      }
+    }, 5000);
+
+    // Проверка статуса модулей
+    async function checkModuleStatus() {
+      const btn = document.getElementById('status-check-btn');
+      const originalText = btn.textContent;
+      
+      btn.textContent = '⏳ Проверка...';
+      btn.disabled = true;
+      
+      try {
+        const response = await fetch('/api/check-services/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+        
+        const data = await response.json();
+        
+        data.services.forEach((service, index) => {
+          const indicator = document.querySelectorAll('.module-indicator')[index];
+          if (service.is_working) {
+            indicator.textContent = '🟢 Работает';
+            indicator.className = 'module-indicator online';
+          } else {
+            indicator.textContent = '🔴 Не работает';
+            indicator.className = 'module-indicator offline';
+          }
+        });
+        
+        btn.textContent = '✅ Обновлено';
+      } catch (error) {
+        console.error('Ошибка при проверке статуса:', error);
+        btn.textContent = '❌ Ошибка';
+      }
+      
+      setTimeout(() => {
+        btn.textContent = originalText;
+        btn.disabled = false;
+      }, 2000);
+    }
+
+    // Инициализация диаграмм
+    document.addEventListener('DOMContentLoaded', function() {
+      // 1. Диаграмма выполненных работ (круговая)
+      const worksCtx = document.getElementById('worksCanvas').getContext('2d');
+      new Chart(worksCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Выполнено', 'В процессе', 'Ожидает'],
+          datasets: [{
+            data: [75, 15, 10],
+            backgroundColor: [
+              '#22c55e',
+              '#eab308', 
+              '#6b7280'
+            ],
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e5e7eb'
+              }
+            }
+          }
+        }
+      });
+
+      // 2. Нарушения по объектам (столбчатая)
+      const violationsCtx = document.getElementById('violationsCanvas').getContext('2d');
+      new Chart(violationsCtx, {
+        type: 'bar',
+        data: {
+          labels: ['Объект #1', 'Объект #2', 'Объект #3', 'Объект #4', 'Объект #5'],
+          datasets: [{
+            label: 'Нарушения',
+            data: [3, 7, 2, 5, 1],
+            backgroundColor: '#ef4444',
+            borderColor: '#dc2626',
+            borderWidth: 1
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e5e7eb'
+              }
+            }
+          }
+        }
+      });
+
+      // 3. Лабораторные данные (линейная)
+      const labCtx = document.getElementById('labCanvas').getContext('2d');
+      new Chart(labCtx, {
+        type: 'line',
+        data: {
+          labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
+          datasets: [{
+            label: 'Нарушения',
+            data: [12, 19, 8, 15, 22, 18],
+            borderColor: '#ef4444',
+            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+            tension: 0.4
+          }, {
+            label: 'Готово',
+            data: [8, 12, 15, 10, 18, 25],
+            borderColor: '#22c55e',
+            backgroundColor: 'rgba(34, 197, 94, 0.1)',
+            tension: 0.4
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            },
+            x: {
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e5e7eb'
+              }
+            }
+          }
+        }
+      });
+
+      // 4. Корреляция нарушений и работ (точечная)
+      const correlationCtx = document.getElementById('correlationCanvas').getContext('2d');
+      new Chart(correlationCtx, {
+        type: 'scatter',
+        data: {
+          datasets: [{
+            label: 'Объекты',
+            data: [
+              {x: 10, y: 2},
+              {x: 15, y: 4},
+              {x: 8, y: 1},
+              {x: 20, y: 6},
+              {x: 12, y: 3},
+              {x: 18, y: 5},
+              {x: 14, y: 2},
+              {x: 16, y: 4}
+            ],
+            backgroundColor: '#ff8a00',
+            borderColor: '#ff6b35',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: 'Количество работ',
+                color: '#e5e7eb'
+              },
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: 'Нарушения',
+                color: '#e5e7eb'
+              },
+              ticks: {
+                color: '#e5e7eb'
+              },
+              grid: {
+                color: '#374151'
+              }
+            }
+          },
+          plugins: {
+            legend: {
+              labels: {
+                color: '#e5e7eb'
+              }
+            }
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>

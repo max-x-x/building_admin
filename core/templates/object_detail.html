@@ -1,0 +1,1252 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Объект #{{ object.id }} - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <div class="object-header">
+        <div class="header-left">
+          <h1>🏗️ Объект #{{ object.id }}</h1>
+          <p class="object-address">{{ object.address }}</p>
+        </div>
+        <div class="header-right">
+          <div class="status-badge {% if object.status == 'activated' %}status-activated{% else %}status-pending{% endif %}">
+            {% if object.status == 'activated' %}
+              ✅ Активирован
+            {% else %}
+              ⏳ Требует активации
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Метрики объекта -->
+    <div class="panel">
+      <h2>📊 Показатели объекта</h2>
+      <div class="metrics-grid">
+        <div class="metric-card">
+          <div class="metric-icon">📄</div>
+          <div class="metric-content">
+            <div class="metric-number">{{ object.documents_count }}</div>
+            <div class="metric-label">Документов</div>
+          </div>
+        </div>
+        
+        {% if object.status == 'activated' and object.violations %}
+        <div class="metric-card">
+          <div class="metric-icon">⚠️</div>
+          <div class="metric-content">
+            <div class="metric-number">{{ object.violations.total }}</div>
+            <div class="metric-label">Нарушений</div>
+          </div>
+        </div>
+        
+        <div class="metric-card">
+          <div class="metric-icon">✅</div>
+          <div class="metric-content">
+            <div class="metric-number">{{ object.violations.fixed }}</div>
+            <div class="metric-label">Исправлено</div>
+          </div>
+        </div>
+        {% endif %}
+        
+        {% if object.work_list %}
+        <div class="metric-card">
+          <div class="metric-icon">📈</div>
+          <div class="metric-content">
+            <div class="metric-number">{{ work_progress }}%</div>
+            <div class="metric-label">Прогресс работ</div>
+          </div>
+        </div>
+        {% endif %}
+      </div>
+      
+      {% if object.work_list %}
+      <div class="progress-section">
+        <div class="progress-bar">
+          <div class="progress-fill" style="width: {{ work_progress }}%"></div>
+        </div>
+        <div class="progress-text">{{ work_progress }}% работ завершено</div>
+      </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>👤 Ответственные лица</h2>
+      <div class="responsible-section">
+        {% if object.responsible_foreman %}
+          <div class="responsible-card">
+            <div class="responsible-icon">🔧</div>
+            <div class="responsible-info">
+              <div class="responsible-title">Прораб</div>
+              <div class="responsible-name">{{ object.responsible_foreman }}</div>
+            </div>
+          </div>
+        {% else %}
+          <div class="responsible-card empty">
+            <div class="responsible-icon">❌</div>
+            <div class="responsible-info">
+              <div class="responsible-title">Прораб не прикреплен</div>
+              <button class="btn btn-accent btn-small" onclick="attachForeman()">
+                Прикрепить прораба
+              </button>
+            </div>
+          </div>
+        {% endif %}
+
+        {% if object.status == 'activated' and object.responsible_iko %}
+          <div class="responsible-card">
+            <div class="responsible-icon">📋</div>
+            <div class="responsible-info">
+              <div class="responsible-title">ИКО</div>
+              <div class="responsible-name">{{ object.responsible_iko }}</div>
+            </div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 Перечень работ</h2>
+      {% if object.work_list %}
+        <div class="work-list">
+          {% for work in object.work_list %}
+            <div class="work-item {% if work.completed %}completed{% endif %}">
+              <div class="work-header">
+                <div class="work-name">
+                  {% if work.completed %}✅{% else %}⏳{% endif %}
+                  {{ work.name }}
+                </div>
+                <div class="work-dates">{{ work.start_date }} - {{ work.end_date }}</div>
+              </div>
+              <div class="work-description">{{ work.description }}</div>
+              {% if work.completed %}
+                <div class="work-status completed">Завершено</div>
+              {% else %}
+                <div class="work-status pending">В процессе</div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-section">
+          <div class="empty-icon">📋</div>
+          <div class="empty-text">Перечень работ не определен</div>
+          <button class="btn btn-accent" onclick="createWorkList()">
+            Создать перечень работ
+          </button>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>📅 Расписание работ</h2>
+      {% if object.schedule %}
+        <div class="schedule-section">
+          <div class="schedule-info">
+            <div class="schedule-icon">📄</div>
+            <div class="schedule-text">Расписание загружено из API</div>
+            <button class="btn btn-primary" onclick="openSchedule('{{ object.schedule }}')">
+              🔗 Открыть расписание
+            </button>
+          </div>
+        </div>
+      {% else %}
+        <div class="empty-section">
+          <div class="empty-icon">📅</div>
+          <div class="empty-text">Расписание будет сгенерировано автоматически на основе запланированных работ</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>🗺️ Полигон объекта</h2>
+      {% if object.status == 'activated' %}
+        <div class="polygon-section">
+          <div class="map-container">
+            <div class="map-placeholder">
+              <div class="map-icon">🗺️</div>
+              <div class="map-text">Область объекта на карте</div>
+              <div class="polygon-info">
+                <div class="polygon-coordinates">
+                  <strong>Координаты полигона:</strong><br>
+                  <span class="coordinates">55.7558° N, 37.6176° E</span>
+                </div>
+                <div class="polygon-area">
+                  <strong>Площадь:</strong> 2,500 м²
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      {% else %}
+        <div class="polygon-inactive">
+          {% if object.polygon_data %}
+            <div class="polygon-card">
+              <div class="polygon-icon">🗺️</div>
+              <div class="polygon-content">
+                <div class="polygon-title">Полигон определен</div>
+                <div class="polygon-description">Область объекта на карте</div>
+                <div class="polygon-coordinates">
+                  <strong>Координаты:</strong> 55.7558° N, 37.6176° E
+                </div>
+              </div>
+            </div>
+          {% else %}
+            <div class="polygon-empty">
+              <div class="polygon-icon">❌</div>
+              <div class="polygon-content">
+                <div class="polygon-title">Полигон не определен</div>
+                <div class="polygon-description">Задайте область объекта на карте</div>
+                <button class="btn btn-accent" onclick="setPolygon()">
+                  🗺️ Задать полигон
+                </button>
+              </div>
+            </div>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>📍 Визиты</h2>
+      {% if object.visits %}
+        <div class="visits-table-container">
+          <table class="visits-table">
+            <thead>
+              <tr>
+                <th>👤 ФИО</th>
+                <th>📅 Дата посещения</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for visit in object.visits %}
+                <tr>
+                  <td>{{ visit.fio }}</td>
+                  <td>{{ visit.date }}</td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-section">
+          <div class="empty-icon">📍</div>
+          <div class="empty-text">Визиты не зарегистрированы</div>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>🚚 Поставки</h2>
+      <div class="deliveries-header">
+        <h3>📦 Выполненные поставки</h3>
+        <button class="btn btn-accent" onclick="planDelivery()">
+          📅 Запланировать поставку
+        </button>
+      </div>
+      
+      {% if object.deliveries %}
+        <div class="deliveries-table-container">
+          <table class="deliveries-table">
+            <thead>
+              <tr>
+                <th>📅 Дата</th>
+                <th>🏢 Поставщик</th>
+                <th>📦 Материалы</th>
+                <th>📄 Накладные</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for delivery in object.deliveries %}
+                <tr>
+                  <td>{{ delivery.date }}</td>
+                  <td>{{ delivery.supplier }}</td>
+                  <td>{{ delivery.materials }}</td>
+                  <td>
+                    <button class="btn btn-primary btn-small" onclick="openInvoice('{{ delivery.invoice_link }}')">
+                      🔗 Открыть накладную
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      {% else %}
+        <div class="empty-section">
+          <div class="empty-icon">🚚</div>
+          <div class="empty-text">Поставки не зарегистрированы</div>
+        </div>
+      {% endif %}
+
+      {% if object.planned_deliveries %}
+        <h3>📅 Запланированные поставки</h3>
+        <div class="planned-deliveries">
+          {% for delivery in object.planned_deliveries %}
+            <div class="planned-delivery-item">
+              <div class="delivery-date">{{ delivery.date }}</div>
+              <div class="delivery-info">
+                <div class="delivery-supplier">{{ delivery.supplier }}</div>
+                <div class="delivery-materials">{{ delivery.materials }}</div>
+              </div>
+              <div class="delivery-status {{ delivery.status }}">
+                {% if delivery.status == 'planned' %}
+                  ⏳ Запланировано
+                {% else %}
+                  ✅ Подтверждено
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    <!-- Документация и действия -->
+    <div class="panel">
+      <h2>📚 Документация и действия</h2>
+      <div class="documentation-actions">
+        <div class="action-buttons">
+          {% if object.documentation_link %}
+            <button class="btn btn-primary" onclick="openDocumentation('{{ object.documentation_link }}')">
+              📚 Документация объекта
+            </button>
+          {% endif %}
+          
+          <button class="btn btn-accent" onclick="generateDocument()">
+            📄 Сгенерировать документ
+          </button>
+          
+          <button class="btn btn-warn" onclick="exportData()">
+            📊 Экспорт данных
+          </button>
+        </div>
+      </div>
+    </div>
+
+    {% if object.status == 'activated' %}
+      <div class="panel">
+        <h2>⚠️ Нарушения</h2>
+        <div class="violations-section">
+          <div class="violations-info">
+            <div class="violations-icon">⚠️</div>
+            <div class="violations-text">
+              <div class="violations-stats">
+                <span class="violations-total">{{ object.violations.total }} нарушений</span>
+                <span class="violations-fixed">{{ object.violations.fixed }} исправлено</span>
+              </div>
+            </div>
+            <button class="btn btn-danger" onclick="openViolations('{{ object.violations.link }}')">
+              🔗 Открыть нарушения
+            </button>
+          </div>
+        </div>
+      </div>
+    {% endif %}
+
+    <div class="nav-links">
+      <a href="{% url 'objects' %}" class="btn btn-primary">
+        ← Назад к объектам
+      </a>
+    </div>
+  </div>
+
+  <!-- Модальные окна -->
+  <div id="deliveryModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📅 Запланировать поставку</h3>
+        <button class="close-btn" onclick="closeModal('deliveryModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>📅 Дата поставки</label>
+          <input type="date" id="deliveryDate" required>
+        </div>
+        <div class="form-group">
+          <label>🏢 Поставщик</label>
+          <input type="text" id="deliverySupplier" placeholder="Название поставщика" required>
+        </div>
+        <div class="form-group">
+          <label>📦 Материалы</label>
+          <textarea id="deliveryMaterials" placeholder="Описание материалов" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+          <label>📄 Накладная (необязательно)</label>
+          <input type="file" id="deliveryInvoice" accept=".pdf,.doc,.docx">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveDelivery()">
+          💾 Запланировать
+        </button>
+        <button class="btn btn-danger" onclick="closeModal('deliveryModal')">
+          ❌ Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="workListModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>📋 Создание перечня работ</h3>
+        <button class="close-btn" onclick="closeModal('workListModal')">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="workListForm">
+          <div class="work-item-form">
+            <div class="form-group">
+              <label>Наименование работ</label>
+              <input type="text" class="work-name-input" placeholder="Введите название работ">
+            </div>
+            <div class="form-group">
+              <label>Описание</label>
+              <textarea class="work-description-input" placeholder="Описание работ"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Дата начала</label>
+                <input type="date" class="work-start-date">
+              </div>
+              <div class="form-group">
+                <label>Дата окончания</label>
+                <input type="date" class="work-end-date">
+              </div>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-accent" onclick="addWorkItem()">
+          ➕ Добавить поле
+        </button>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" onclick="saveWorkList()">
+          💾 Сохранить
+        </button>
+        <button class="btn btn-danger" onclick="closeModal('workListModal')">
+          ❌ Отмена
+        </button>
+      </div>
+    </div>
+  </div>
+
+
+  <style>
+    .object-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .object-address {
+      color: var(--text-secondary);
+      font-size: 1.1rem;
+      margin: 0.5rem 0 0 0;
+    }
+
+    .status-badge {
+      padding: 0.75rem 1.5rem;
+      border-radius: 25px;
+      font-weight: 600;
+      font-size: 1rem;
+    }
+
+    .status-activated {
+      background: var(--gradient-secondary);
+      color: var(--text-primary);
+    }
+
+    .status-pending {
+      background: rgba(234, 179, 8, 0.2);
+      color: var(--warn-yellow);
+      border: 1px solid var(--warn-yellow);
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .metric-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .metric-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .metric-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .metric-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .progress-section {
+      margin-top: 2rem;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 20px;
+      background: var(--chip-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--gradient-secondary);
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: var(--text-secondary);
+      font-weight: 600;
+    }
+
+    .responsible-section {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .responsible-card {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .responsible-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .responsible-card.empty {
+      border-style: dashed;
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .responsible-icon {
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .responsible-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .responsible-name {
+      color: var(--text-secondary);
+    }
+
+    .work-list {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .work-item {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+    }
+
+    .work-item:hover {
+      transform: translateX(5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .work-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 0.5rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .work-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 1.1rem;
+    }
+
+    .work-dates {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .work-description {
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    .work-status {
+      margin-top: 1rem;
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-align: center;
+    }
+
+    .work-status.completed {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+    }
+
+    .work-status.pending {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--warn-yellow);
+      border: 1px solid var(--warn-yellow);
+    }
+
+    .work-item.completed {
+      border-left: 4px solid var(--accent-green);
+    }
+
+    .deliveries-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 2rem;
+      flex-wrap: wrap;
+      gap: 1rem;
+    }
+
+    .deliveries-table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--chip-bg);
+    }
+
+    .deliveries-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .deliveries-table th {
+      background: var(--gradient-primary);
+      color: var(--text-primary);
+      padding: 1rem 1.5rem;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .deliveries-table td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .deliveries-table tbody tr:hover {
+      background: var(--bg-panel);
+    }
+
+    .planned-deliveries {
+      margin-top: 2rem;
+    }
+
+    .planned-delivery-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .planned-delivery-item:hover {
+      transform: translateX(5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .delivery-date {
+      font-weight: 600;
+      color: var(--text-primary);
+      min-width: 120px;
+    }
+
+    .delivery-info {
+      flex: 1;
+    }
+
+    .delivery-supplier {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.25rem;
+    }
+
+    .delivery-materials {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+    }
+
+    .delivery-status {
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .delivery-status.planned {
+      background: rgba(234, 179, 8, 0.1);
+      color: var(--warn-yellow);
+      border: 1px solid var(--warn-yellow);
+    }
+
+    .delivery-status.confirmed {
+      background: rgba(34, 197, 94, 0.1);
+      color: var(--accent-green);
+      border: 1px solid var(--accent-green);
+    }
+
+    .documentation-actions {
+      margin: 2rem 0;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .violations-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .violations-total {
+      color: var(--danger-red);
+      font-weight: 600;
+    }
+
+    .violations-fixed {
+      color: var(--accent-green);
+      font-weight: 600;
+    }
+
+    .polygon-section {
+      margin: 2rem 0;
+    }
+
+    .map-container {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      overflow: hidden;
+      min-height: 300px;
+    }
+
+    .map-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem;
+      text-align: center;
+      background: linear-gradient(135deg, var(--chip-bg) 0%, var(--bg-panel) 100%);
+      position: relative;
+      min-height: 300px;
+    }
+
+    .map-placeholder::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: 
+        radial-gradient(circle at 30% 30%, rgba(255, 138, 0, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 70% 70%, rgba(34, 197, 94, 0.1) 0%, transparent 50%);
+    }
+
+    .map-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .map-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .polygon-info {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2rem;
+      position: relative;
+      z-index: 1;
+    }
+
+    .polygon-coordinates,
+    .polygon-area {
+      background: var(--bg-panel);
+      padding: 1rem;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+    }
+
+    .coordinates {
+      font-family: 'Courier New', monospace;
+      color: var(--brand-orange);
+      font-weight: 600;
+    }
+
+    .polygon-inactive {
+      margin: 2rem 0;
+    }
+
+    .polygon-card,
+    .polygon-empty {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+      padding: 2rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      transition: all 0.3s ease;
+    }
+
+    .polygon-card:hover,
+    .polygon-empty:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .polygon-empty {
+      border-style: dashed;
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .polygon-icon {
+      font-size: 3rem;
+      flex-shrink: 0;
+    }
+
+    .polygon-content {
+      flex: 1;
+    }
+
+    .polygon-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .polygon-description {
+      color: var(--text-secondary);
+      margin-bottom: 1rem;
+    }
+
+    .polygon-coordinates {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 768px) {
+      .polygon-info {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+      }
+
+      .polygon-card,
+      .polygon-empty {
+        flex-direction: column;
+        text-align: center;
+      }
+
+      .map-placeholder {
+        padding: 2rem 1rem;
+      }
+    }
+
+    .schedule-section,
+    .violations-section {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+    }
+
+    .schedule-icon,
+    .violations-icon {
+      font-size: 2rem;
+    }
+
+    .schedule-text,
+    .violations-text {
+      flex: 1;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .schedule-options {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .visits-table-container,
+    .suppliers-table-container {
+      overflow-x: auto;
+      border-radius: 12px;
+      border: 1px solid var(--border-color);
+      background: var(--chip-bg);
+    }
+
+    .visits-table,
+    .suppliers-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    .visits-table th,
+    .suppliers-table th {
+      background: var(--gradient-primary);
+      color: var(--text-primary);
+      padding: 1rem 1.5rem;
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .visits-table td,
+    .suppliers-table td {
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .visits-table tbody tr:hover,
+    .suppliers-table tbody tr:hover {
+      background: var(--bg-panel);
+    }
+
+    .empty-section {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-text {
+      font-size: 1.1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background: var(--bg-panel);
+      margin: 5% auto;
+      padding: 0;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: var(--shadow-panel);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem 2rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .modal-header h3 {
+      margin: 0;
+      color: var(--text-primary);
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 2rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-body {
+      padding: 2rem;
+    }
+
+    .modal-footer {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem 2rem;
+      border-top: 1px solid var(--border-color);
+      justify-content: flex-end;
+    }
+
+    .work-item-form,
+    .schedule-item-form {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+    }
+
+    .divider {
+      text-align: center;
+      margin: 2rem 0;
+      color: var(--text-muted);
+      position: relative;
+    }
+
+    .divider::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      height: 1px;
+      background: var(--border-color);
+    }
+
+    .divider::after {
+      content: 'или';
+      background: var(--bg-panel);
+      padding: 0 1rem;
+      position: relative;
+    }
+
+    @media (max-width: 768px) {
+      .object-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .responsible-section {
+        grid-template-columns: 1fr;
+      }
+
+      .work-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+
+      .modal-content {
+        width: 95%;
+        margin: 10% auto;
+      }
+
+      .schedule-options {
+        flex-direction: column;
+      }
+    }
+  </style>
+
+  <script>
+    function openSchedule(link) {
+      window.open(link, '_blank');
+    }
+
+    function openInvoice(link) {
+      window.open(link, '_blank');
+    }
+
+    function openViolations(link) {
+      window.open(link, '_blank');
+    }
+
+    function openDocumentation(link) {
+      window.open(link, '_blank');
+    }
+
+    function generateDocument() {
+      alert('📄 Функция генерации документов будет реализована в следующих версиях');
+    }
+
+    function exportData() {
+      alert('📊 Функция экспорта данных будет реализована в следующих версиях');
+    }
+
+    function planDelivery() {
+      document.getElementById('deliveryModal').style.display = 'block';
+    }
+
+    function saveDelivery() {
+      const date = document.getElementById('deliveryDate').value;
+      const supplier = document.getElementById('deliverySupplier').value;
+      const materials = document.getElementById('deliveryMaterials').value;
+      
+      if (!date || !supplier || !materials) {
+        alert('⚠️ Пожалуйста, заполните все обязательные поля!');
+        return;
+      }
+      
+      alert('📅 Поставка успешно запланирована!');
+      closeModal('deliveryModal');
+    }
+
+    function setPolygon() {
+      // Редирект на страницу задания полигона
+      window.location.href = '/set-polygon/';
+    }
+
+    function attachForeman() {
+      alert('🔧 Функция прикрепления прораба будет реализована в следующих версиях');
+    }
+
+    function createWorkList() {
+      document.getElementById('workListModal').style.display = 'block';
+    }
+
+
+    function addWorkItem() {
+      const form = document.getElementById('workListForm');
+      const newItem = document.createElement('div');
+      newItem.className = 'work-item-form';
+      newItem.innerHTML = `
+        <div class="form-group">
+          <label>Наименование работ</label>
+          <input type="text" class="work-name-input" placeholder="Введите название работ">
+        </div>
+        <div class="form-group">
+          <label>Описание</label>
+          <textarea class="work-description-input" placeholder="Описание работ"></textarea>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Дата начала</label>
+            <input type="date" class="work-start-date">
+          </div>
+          <div class="form-group">
+            <label>Дата окончания</label>
+            <input type="date" class="work-end-date">
+          </div>
+        </div>
+      `;
+      form.appendChild(newItem);
+    }
+
+    function saveWorkList() {
+      alert('💾 Перечень работ сохранен!');
+      closeModal('workListModal');
+    }
+
+    function closeModal(modalId) {
+      document.getElementById(modalId).style.display = 'none';
+    }
+
+    // Закрытие модального окна при клике вне его
+    window.onclick = function(event) {
+      const modals = document.querySelectorAll('.modal');
+      modals.forEach(modal => {
+        if (event.target === modal) {
+          modal.style.display = 'none';
+        }
+      });
+    }
+
+    // Анимация появления элементов
+    document.addEventListener('DOMContentLoaded', function() {
+      const panels = document.querySelectorAll('.panel');
+      panels.forEach((panel, index) => {
+        panel.style.opacity = '0';
+        panel.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          panel.style.transition = 'all 0.6s ease';
+          panel.style.opacity = '1';
+          panel.style.transform = 'translateY(0)';
+        }, index * 150);
+      });
+    });
+  </script>
+</body>
+</html>

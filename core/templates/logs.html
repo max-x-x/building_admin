@@ -1,0 +1,356 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Логи системы - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>📊 Системные Логи</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+        Мониторинг и анализ событий системы
+      </p>
+    </div>
+
+    <div class="panel">
+      <div class="logs-controls">
+        <div class="filter-group">
+          <label>🔍 Фильтр по уровню:</label>
+          <select id="level-filter">
+            <option value="">Все уровни</option>
+            <option value="error">❌ Ошибки</option>
+            <option value="warning">⚠️ Предупреждения</option>
+            <option value="info">ℹ️ Информация</option>
+            <option value="success">✅ Успех</option>
+          </select>
+        </div>
+        
+        <div class="filter-group">
+          <label>📅 Период:</label>
+          <select id="period-filter">
+            <option value="today">Сегодня</option>
+            <option value="week">Неделя</option>
+            <option value="month">Месяц</option>
+            <option value="all">Все время</option>
+          </select>
+        </div>
+
+        <button class="btn btn-accent" onclick="refreshLogs()">
+          🔄 Обновить
+        </button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 Логи событий</h2>
+      <div class="logs-container">
+        <div class="log-entry error">
+          <div class="log-time">14:32:15</div>
+          <div class="log-level">❌ ERROR</div>
+          <div class="log-message">Ошибка подключения к базе данных</div>
+          <div class="log-source">database.py:142</div>
+        </div>
+
+        <div class="log-entry warning">
+          <div class="log-time">14:28:42</div>
+          <div class="log-level">⚠️ WARNING</div>
+          <div class="log-message">Высокая загрузка CPU: 85%</div>
+          <div class="log-source">monitor.py:67</div>
+        </div>
+
+        <div class="log-entry success">
+          <div class="log-time">14:25:18</div>
+          <div class="log-level">✅ SUCCESS</div>
+          <div class="log-message">Пользователь успешно авторизован</div>
+          <div class="log-source">auth.py:89</div>
+        </div>
+
+        <div class="log-entry info">
+          <div class="log-time">14:20:33</div>
+          <div class="log-level">ℹ️ INFO</div>
+          <div class="log-message">Запуск системы мониторинга</div>
+          <div class="log-source">monitor.py:12</div>
+        </div>
+
+        <div class="log-entry error">
+          <div class="log-time">14:15:07</div>
+          <div class="log-level">❌ ERROR</div>
+          <div class="log-message">Таймаут запроса к API</div>
+          <div class="log-source">api_client.py:234</div>
+        </div>
+
+        <div class="log-entry warning">
+          <div class="log-time">14:10:55</div>
+          <div class="log-level">⚠️ WARNING</div>
+          <div class="log-message">Недостаточно места на диске: 15%</div>
+          <div class="log-source">storage.py:45</div>
+        </div>
+
+        <div class="log-entry success">
+          <div class="log-time">14:05:22</div>
+          <div class="log-level">✅ SUCCESS</div>
+          <div class="log-message">Резервное копирование завершено</div>
+          <div class="log-source">backup.py:156</div>
+        </div>
+
+        <div class="log-entry info">
+          <div class="log-time">14:00:01</div>
+          <div class="log-level">ℹ️ INFO</div>
+          <div class="log-message">Система запущена</div>
+          <div class="log-source">main.py:1</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="logs-stats">
+        <div class="stat-card">
+          <div class="stat-icon">❌</div>
+          <div class="stat-number">3</div>
+          <div class="stat-label">Ошибки</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⚠️</div>
+          <div class="stat-number">2</div>
+          <div class="stat-label">Предупреждения</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">ℹ️</div>
+          <div class="stat-number">2</div>
+          <div class="stat-label">Информация</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-number">2</div>
+          <div class="stat-label">Успешные</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        ← Назад к дашборду
+      </a>
+      <button class="btn btn-warn" onclick="exportLogs()">
+        📥 Экспорт логов
+      </button>
+    </div>
+  </div>
+
+  <style>
+    .logs-controls {
+      display: flex;
+      gap: 2rem;
+      align-items: end;
+      flex-wrap: wrap;
+    }
+
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .filter-group label {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      font-weight: 500;
+    }
+
+    .filter-group select {
+      padding: 0.75rem 1rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      color: var(--text-primary);
+      min-width: 150px;
+    }
+
+    .logs-container {
+      max-height: 600px;
+      overflow-y: auto;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      background: var(--chip-bg);
+    }
+
+    .log-entry {
+      display: grid;
+      grid-template-columns: 100px 120px 1fr 150px;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      align-items: center;
+      transition: all 0.3s ease;
+    }
+
+    .log-entry:hover {
+      background: var(--bg-panel);
+    }
+
+    .log-entry:last-child {
+      border-bottom: none;
+    }
+
+    .log-time {
+      font-family: 'Courier New', monospace;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .log-level {
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .log-message {
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+
+    .log-source {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .log-entry.error {
+      border-left: 4px solid var(--danger-red);
+    }
+
+    .log-entry.warning {
+      border-left: 4px solid var(--warn-yellow);
+    }
+
+    .log-entry.success {
+      border-left: 4px solid var(--accent-green);
+    }
+
+    .log-entry.info {
+      border-left: 4px solid var(--brand-orange);
+    }
+
+    .logs-stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .stat-icon {
+      font-size: 2rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    @media (max-width: 768px) {
+      .logs-controls {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .log-entry {
+        grid-template-columns: 1fr;
+        gap: 0.5rem;
+        text-align: left;
+      }
+
+      .log-time {
+        order: 1;
+      }
+
+      .log-level {
+        order: 2;
+      }
+
+      .log-message {
+        order: 3;
+      }
+
+      .log-source {
+        order: 4;
+      }
+    }
+  </style>
+
+  <script>
+    function refreshLogs() {
+      const btn = event.target;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span class="loading"></span> Обновление...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+        // Здесь можно добавить реальное обновление логов
+      }, 2000);
+    }
+
+    function exportLogs() {
+      alert('📥 Функция экспорта логов будет реализована в следующих версиях');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Анимация появления логов
+      const logEntries = document.querySelectorAll('.log-entry');
+      logEntries.forEach((entry, index) => {
+        entry.style.opacity = '0';
+        entry.style.transform = 'translateX(-20px)';
+        setTimeout(() => {
+          entry.style.transition = 'all 0.5s ease';
+          entry.style.opacity = '1';
+          entry.style.transform = 'translateX(0)';
+        }, index * 100);
+      });
+
+      // Фильтрация логов
+      const levelFilter = document.getElementById('level-filter');
+      levelFilter.addEventListener('change', function() {
+        const selectedLevel = this.value;
+        const entries = document.querySelectorAll('.log-entry');
+        
+        entries.forEach(entry => {
+          if (!selectedLevel || entry.classList.contains(selectedLevel)) {
+            entry.style.display = 'grid';
+          } else {
+            entry.style.display = 'none';
+          }
+        });
+      });
+    });
+  </script>
+</body>
+</html>

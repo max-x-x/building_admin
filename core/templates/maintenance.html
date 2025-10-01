@@ -1,0 +1,735 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Техническое обслуживание - Космическая админ панель</title>
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <style>
+        .maintenance-container {
+            display: flex;
+            gap: 2rem;
+            min-height: calc(100vh - 200px);
+        }
+
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+        }
+
+        .sidebar {
+            width: 350px;
+            background: var(--panel-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 1.5rem;
+            height: fit-content;
+            position: sticky;
+            top: 2rem;
+        }
+
+        .tickets-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background: var(--panel-bg);
+            border-radius: 12px;
+            padding: 1.5rem;
+            border: 1px solid var(--border-color);
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--brand-orange), #ff6b35);
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+
+        .stat-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+
+        .total .stat-number {
+            color: var(--brand-orange);
+        }
+
+        .new .stat-number {
+            color: #3b82f6;
+        }
+
+        .closed .stat-number {
+            color: var(--accent-green);
+        }
+
+        .tickets-list {
+            background: var(--panel-bg);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+        }
+
+        .tickets-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            background: linear-gradient(135deg, var(--panel-bg), #1a1f2e);
+        }
+
+        .tickets-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 1rem 0;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .tickets-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .filter-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .filter-btn {
+            padding: 0.5rem 1rem;
+            background: var(--chip-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .filter-btn:hover {
+            background: var(--brand-orange);
+            color: white;
+            border-color: var(--brand-orange);
+        }
+
+        .filter-btn.active {
+            background: var(--brand-orange);
+            color: white;
+            border-color: var(--brand-orange);
+        }
+
+        .tickets-list-content {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .ticket-item {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .ticket-item:hover {
+            background: var(--chip-bg);
+        }
+
+        .ticket-item:last-child {
+            border-bottom: none;
+        }
+
+        .ticket-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 0.5rem;
+        }
+
+        .ticket-id {
+            font-weight: 600;
+            color: var(--brand-orange);
+            font-size: 0.9rem;
+        }
+
+        .ticket-type {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .ticket-type.new {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+        }
+
+        .ticket-type.closed {
+            background: rgba(34, 197, 94, 0.2);
+            color: var(--accent-green);
+        }
+
+        .ticket-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .ticket-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .ticket-from {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .ticket-time {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+
+        .ticket-details {
+            display: none;
+            padding: 1rem 1.5rem;
+            background: var(--chip-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .ticket-details.active {
+            display: block;
+        }
+
+        .ticket-description {
+            color: var(--text-secondary);
+            line-height: 1.6;
+            margin-bottom: 1rem;
+        }
+
+        .reply-section {
+            margin-top: 1rem;
+        }
+
+        .reply-form {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .reply-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            background: var(--background);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 40px;
+        }
+
+        .reply-input:focus {
+            outline: none;
+            border-color: var(--brand-orange);
+            box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.1);
+        }
+
+        .reply-btn {
+            padding: 0.75rem 1.5rem;
+            background: linear-gradient(135deg, var(--brand-orange), #ff6b35);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+
+        .reply-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+        }
+
+        .replies-list {
+            margin-top: 1rem;
+        }
+
+        .reply-item {
+            background: var(--background);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+            border-left: 3px solid var(--brand-orange);
+        }
+
+        .reply-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .reply-author {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .reply-time {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .reply-message {
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        .empty-tickets {
+            text-align: center;
+            padding: 3rem 2rem;
+            color: var(--text-secondary);
+        }
+
+        .empty-icon {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+        }
+
+        .empty-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+
+        .empty-description {
+            font-size: 0.9rem;
+        }
+
+        .refresh-btn {
+            padding: 0.5rem 1rem;
+            background: var(--chip-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.85rem;
+        }
+
+        .refresh-btn:hover {
+            background: var(--brand-orange);
+            color: white;
+            border-color: var(--brand-orange);
+        }
+
+        .header-content {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.75rem 1.5rem;
+            background: var(--chip-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-primary);
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .back-btn:hover {
+            background: var(--brand-orange);
+            color: white;
+            border-color: var(--brand-orange);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+        }
+
+        @media (max-width: 1200px) {
+            .maintenance-container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                position: static;
+            }
+
+            .header-content {
+                flex-direction: column;
+                gap: 1rem;
+                text-align: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="header-content">
+                <h1>🔧 Техническое обслуживание</h1>
+                <a href="{% url 'dashboard' %}" class="back-btn">
+                    ← Вернуться в меню
+                </a>
+            </div>
+        </div>
+
+        <div class="maintenance-container">
+            <div class="main-content">
+        <div class="tickets-stats">
+          <div class="stat-card total">
+            <div class="stat-icon">🎫</div>
+            <div class="stat-number">{{ total_tickets }}</div>
+            <div class="stat-label">Всего тикетов</div>
+          </div>
+          <div class="stat-card new">
+            <div class="stat-icon">🆕</div>
+            <div class="stat-number">{{ new_tickets }}</div>
+            <div class="stat-label">Новые</div>
+          </div>
+          <div class="stat-card closed">
+            <div class="stat-icon">✅</div>
+            <div class="stat-number">{{ closed_tickets }}</div>
+            <div class="stat-label">Закрытые</div>
+          </div>
+        </div>
+
+                <div class="tickets-list">
+                    <div class="tickets-header">
+                        <h2 class="tickets-title">
+                            🎫 Список тикетов
+                        </h2>
+                        <div class="tickets-controls">
+                            <div class="filter-buttons">
+                                <button class="filter-btn active" onclick="filterTickets('all')">
+                                    Все
+                                </button>
+                                <button class="filter-btn" onclick="filterTickets('new')">
+                                    Новые
+                                </button>
+                                <button class="filter-btn" onclick="filterTickets('closed')">
+                                    Закрытые
+                                </button>
+                            </div>
+                            <button class="refresh-btn" onclick="refreshTickets()">
+                                🔄 Обновить
+                            </button>
+                        </div>
+                    </div>
+                    <div class="tickets-list-content">
+                        {% for ticket in tickets %}
+                        <div class="ticket-item {% if ticket.replies.count > 0 %}closed{% else %}new{% endif %}" onclick="toggleTicketDetails({{ ticket.id }})">
+                            <div class="ticket-header">
+                                <div class="ticket-id">#{{ ticket.ticket_id }}</div>
+                                <div class="ticket-type {% if ticket.replies.count > 0 %}closed{% else %}new{% endif %}">
+                                    {% if ticket.replies.count > 0 %}✅ Закрыт{% else %}🆕 Новый{% endif %}
+                                </div>
+                            </div>
+                            <div class="ticket-title">{{ ticket.title }}</div>
+                            <div class="ticket-meta">
+                                <div class="ticket-from">
+                                    <span>👤</span>
+                                    <span>{{ ticket.from_user }}</span>
+                                </div>
+                                <div class="ticket-time">
+                                    <span>🕐</span>
+                                    <span>{{ ticket.created_at|date:"d.m.Y H:i" }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="ticket-details" id="details-{{ ticket.id }}">
+                                <div class="ticket-description" onclick="event.stopPropagation()">
+                                    {{ ticket.description }}
+                                </div>
+                                
+                                <div class="reply-section" onclick="event.stopPropagation()">
+                                    <h4>💬 Ответить на тикет</h4>
+                                    <div class="reply-form">
+                                        <textarea 
+                                            class="reply-input" 
+                                            id="reply-{{ ticket.id }}" 
+                                            placeholder="Введите ваш ответ..."
+                                            rows="3"
+                                            onclick="event.stopPropagation()"
+                                        ></textarea>
+                                        <button 
+                                            class="reply-btn" 
+                                            onclick="event.stopPropagation(); replyToTicket('{{ ticket.ticket_id }}', {{ ticket.id }})"
+                                        >
+                                            📤 Отправить
+                                        </button>
+                                    </div>
+                                </div>
+                                
+                                <div class="replies-list" id="replies-{{ ticket.id }}" onclick="event.stopPropagation()">
+                                    {% for reply in ticket.replies.all %}
+                                    <div class="reply-item">
+                                        <div class="reply-header">
+                                            <div class="reply-author">{{ reply.author.username }}</div>
+                                            <div class="reply-time">{{ reply.created_at|date:"d.m.Y H:i" }}</div>
+                                        </div>
+                                        <div class="reply-message">{{ reply.message }}</div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="empty-tickets">
+                            <div class="empty-icon">🎫</div>
+                            <div class="empty-title">Тикеты не найдены</div>
+                            <div class="empty-description">Пока нет активных тикетов техподдержки</div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <h3 style="margin-top: 0; color: var(--text-primary);">📊 API Документация</h3>
+                <div style="background: var(--chip-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4 style="color: var(--brand-orange); margin: 0 0 0.5rem 0;">Создать тикет</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+                        POST /api/tickets/create/
+                    </p>
+                    <code style="display: block; margin-top: 0.5rem; padding: 0.5rem; background: var(--background); border-radius: 4px; font-size: 0.8rem;">
+{
+  "title": "Проблема с сервисом",
+  "description": "Описание проблемы",
+  "from_user": "Иванов И.И. (Название сервиса)"
+}
+                    </code>
+                </div>
+                
+                <div style="background: var(--chip-bg); padding: 1rem; border-radius: 8px; margin-bottom: 1rem;">
+                    <h4 style="color: var(--brand-orange); margin: 0 0 0.5rem 0;">Получить тикеты</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+                        GET /api/tickets/
+                    </p>
+                </div>
+                
+                <div style="background: var(--chip-bg); padding: 1rem; border-radius: 8px;">
+                    <h4 style="color: var(--brand-orange); margin: 0 0 0.5rem 0;">Ответить на тикет</h4>
+                    <p style="margin: 0; font-size: 0.85rem; color: var(--text-secondary);">
+                        POST /api/tickets/reply/
+                    </p>
+                    <code style="display: block; margin-top: 0.5rem; padding: 0.5rem; background: var(--background); border-radius: 4px; font-size: 0.8rem;">
+{
+  "ticket_id": "TICKET-12345678",
+  "message": "Ваш ответ"
+}
+                    </code>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function toggleTicketDetails(ticketId) {
+            const details = document.getElementById(`details-${ticketId}`);
+            if (details.classList.contains('active')) {
+                details.classList.remove('active');
+            } else {
+                // Закрываем все остальные детали
+                document.querySelectorAll('.ticket-details.active').forEach(el => {
+                    el.classList.remove('active');
+                });
+                details.classList.add('active');
+            }
+        }
+
+        function filterTickets(filter) {
+            // Обновляем активную кнопку
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            event.target.classList.add('active');
+
+            // Фильтруем тикеты
+            const tickets = document.querySelectorAll('.ticket-item');
+            tickets.forEach(ticket => {
+                if (filter === 'all') {
+                    ticket.style.display = 'block';
+                } else if (filter === 'new') {
+                    ticket.style.display = ticket.classList.contains('new') ? 'block' : 'none';
+                } else if (filter === 'closed') {
+                    ticket.style.display = ticket.classList.contains('closed') ? 'block' : 'none';
+                }
+            });
+        }
+
+        async function replyToTicket(ticketId, ticketElementId) {
+            const messageInput = document.getElementById(`reply-${ticketElementId}`);
+            const message = messageInput.value.trim();
+            
+            if (!message) {
+                alert('Введите сообщение');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/tickets/reply/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({
+                        ticket_id: ticketId,
+                        message: message
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Очищаем поле ввода
+                    messageInput.value = '';
+                    
+                    // Добавляем ответ в список
+                    addReplyToTicket(ticketElementId, message);
+                    
+                    // Показываем уведомление
+                    showNotification('Ответ успешно отправлен!', 'success');
+                } else {
+                    showNotification('Ошибка: ' + data.error, 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка при отправке ответа', 'error');
+            }
+        }
+
+        function addReplyToTicket(ticketElementId, message) {
+            const repliesList = document.getElementById(`replies-${ticketElementId}`);
+            const now = new Date();
+            const timeString = now.toLocaleDateString('ru-RU') + ' ' + now.toLocaleTimeString('ru-RU', {hour: '2-digit', minute: '2-digit'});
+            
+            const replyElement = document.createElement('div');
+            replyElement.className = 'reply-item';
+            replyElement.innerHTML = `
+                <div class="reply-header">
+                    <div class="reply-author">Вы</div>
+                    <div class="reply-time">${timeString}</div>
+                </div>
+                <div class="reply-message">${message}</div>
+            `;
+            
+            // Добавляем обработчик для предотвращения закрытия тикета
+            replyElement.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+            
+            repliesList.appendChild(replyElement);
+        }
+
+        async function refreshTickets() {
+            try {
+                const response = await fetch('/api/tickets/');
+                const data = await response.json();
+                
+                if (data.success) {
+                    showNotification('Тикеты обновлены', 'success');
+                    // Перезагружаем страницу для обновления данных
+                    location.reload();
+                } else {
+                    showNotification('Ошибка при обновлении', 'error');
+                }
+            } catch (error) {
+                showNotification('Ошибка при обновлении тикетов', 'error');
+            }
+        }
+
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        function showNotification(message, type) {
+            const notification = document.createElement('div');
+            notification.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 1rem 1.5rem;
+                background: ${type === 'success' ? 'var(--accent-green)' : 'var(--danger-red)'};
+                color: white;
+                border-radius: 8px;
+                z-index: 1000;
+                font-weight: 600;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+            `;
+            notification.textContent = message;
+            
+            document.body.appendChild(notification);
+            
+            setTimeout(() => {
+                notification.remove();
+            }, 3000);
+        }
+
+        // Автообновление каждые 30 секунд
+        setInterval(refreshTickets, 30000);
+    </script>
+</body>
+</html>
+

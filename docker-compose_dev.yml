@@ -1,0 +1,26 @@
+services:
+  db:
+    image: postgres:16.0-alpine
+    container_name: building_admin-db_postgres
+    volumes:
+      - building_admin-postgres-data_1:/var/lib/postgresql/data/
+    env_file:
+      - .env
+    ports:
+      - "5501:5432"
+    expose:
+      - "5432"
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready", "-U", "", "-d", "" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - django_network
+
+volumes:
+  building_admin-postgres-data_1:
+
+networks:
+  django_network:
+    driver: bridge

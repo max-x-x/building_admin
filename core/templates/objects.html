@@ -1,0 +1,437 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Объекты - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel">
+      <h1>🚀 Управление Объектами</h1>
+      
+      <div class="nav-links">
+        <a href="{% url 'dashboard' %}" class="btn btn-primary">
+          ← Назад к дашборду
+        </a>
+        <button class="btn btn-accent" id="show-form-btn">
+          ✨ Добавить объект
+        </button>
+      </div>
+
+
+      <div class="tabs">
+        <button class="tab-button active" onclick="switchTab('activated')">
+          ✅ Активированные (45)
+        </button>
+        <button class="tab-button" onclick="switchTab('pending')">
+          ⏳ Требующие активации (44)
+        </button>
+      </div>
+
+      <div id="activated-tab" class="tab-content active">
+        <div class="objects-grid">
+          {% for obj in objects %}
+          {% if obj.id and obj.id|divisibleby:2 %}
+          <div class="object-card" onclick="openObjectDetail({{ obj.id }})">
+            <div class="card-header">
+              <div class="object-id">#{{ obj.id }}</div>
+              <div class="object-status chip chip-success">Активирован</div>
+            </div>
+          
+          <div class="card-content">
+            <div class="object-address">
+              <div class="address-icon">📍</div>
+              <div class="address-text">
+                <strong>{{ obj.address }}</strong>
+              </div>
+            </div>
+            
+            <div class="object-responsible">
+              <div class="responsible-icon">👤</div>
+              <div class="responsible-text">
+                <span class="chip chip-success">{{ obj.responsible }}</span>
+              </div>
+            </div>
+            
+            <div class="object-description">
+              <div class="description-icon">📝</div>
+              <div class="description-text">
+                Строительный объект в фазе подготовки
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-footer">
+            <div class="click-hint">👆 Нажмите для детального просмотра</div>
+          </div>
+        </div>
+          {% endif %}
+          {% empty %}
+          <div class="empty-state">
+            <div class="empty-icon">🌌</div>
+            <div class="empty-title">Активированные объекты не найдены</div>
+            <div class="empty-description">Нет активированных объектов</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="pending-tab" class="tab-content">
+        <div class="objects-grid">
+          {% for obj in objects %}
+          {% if obj.id and not obj.id|divisibleby:2 %}
+          <div class="object-card" onclick="openObjectDetail({{ obj.id }})">
+            <div class="card-header">
+              <div class="object-id">#{{ obj.id }}</div>
+              <div class="object-status chip chip-warning">Требует активации</div>
+            </div>
+          
+          <div class="card-content">
+            <div class="object-address">
+              <div class="address-icon">📍</div>
+              <div class="address-text">
+                <strong>{{ obj.address }}</strong>
+              </div>
+            </div>
+            
+            <div class="object-responsible">
+              <div class="responsible-icon">👤</div>
+              <div class="responsible-text">
+                <span class="chip chip-success">{{ obj.responsible }}</span>
+              </div>
+            </div>
+            
+            <div class="object-description">
+              <div class="description-icon">📝</div>
+              <div class="description-text">
+                Строительный объект в фазе подготовки
+              </div>
+            </div>
+          </div>
+          
+          <div class="card-footer">
+            <div class="click-hint">👆 Нажмите для детального просмотра</div>
+          </div>
+        </div>
+          {% endif %}
+          {% empty %}
+          <div class="empty-state">
+            <div class="empty-icon">🌌</div>
+            <div class="empty-title">Объекты не найдены</div>
+            <div class="empty-description">Добавьте первый объект, чтобы начать работу</div>
+            <button class="btn btn-accent" id="show-form-btn-empty">
+              ✨ Добавить объект
+            </button>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <form id="add-object-form" method="post">
+        {% csrf_token %}
+        <h2>✨ Добавление нового объекта</h2>
+        
+        <div class="form-group">
+          <label for="name">🏗️ Название объекта</label>
+          <input type="text" id="name" name="name" placeholder="Введите название объекта" required>
+        </div>
+
+        <div class="form-group">
+          <label for="address">📍 Адрес объекта</label>
+          <input type="text" id="address" name="address" placeholder="Введите полный адрес объекта" required>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-accent">
+            🚀 Создать объект
+          </button>
+          <button type="button" class="btn btn-danger" onclick="hideForm()">
+            ❌ Отмена
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <style>
+    .objects-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+      gap: 2rem;
+      margin: 2rem 0;
+    }
+
+    .object-card {
+      background: var(--bg-panel);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1.5rem;
+      transition: all 0.3s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .object-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+      background: var(--gradient-primary);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .object-card:hover {
+      transform: translateY(-8px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .object-card:hover::before {
+      opacity: 1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .object-id {
+      font-size: 1.2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      background: var(--chip-bg);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .card-content {
+      margin-bottom: 1.5rem;
+    }
+
+    .object-address,
+    .object-responsible,
+    .object-description {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .address-icon,
+    .responsible-icon,
+    .description-icon {
+      font-size: 1.2rem;
+      margin-top: 0.2rem;
+      flex-shrink: 0;
+    }
+
+    .address-text,
+    .responsible-text,
+    .description-text {
+      flex: 1;
+    }
+
+    .address-text strong {
+      color: var(--text-primary);
+      font-size: 1.1rem;
+    }
+
+    .description-text {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.4;
+    }
+
+    .card-footer {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border-color);
+    }
+
+    .click-hint {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    .object-card {
+      cursor: pointer;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 0.5rem;
+      margin: 2rem 0;
+      border-bottom: 2px solid var(--border-color);
+    }
+
+    .tab-button {
+      background: transparent;
+      border: none;
+      padding: 1rem 2rem;
+      color: var(--text-secondary);
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 3px solid transparent;
+      transition: all 0.3s ease;
+    }
+
+    .tab-button:hover {
+      color: var(--text-primary);
+      background: var(--chip-bg);
+    }
+
+    .tab-button.active {
+      color: var(--brand-orange);
+      border-bottom-color: var(--brand-orange);
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .empty-state {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 4rem 2rem;
+      background: var(--chip-bg);
+      border: 2px dashed var(--border-color);
+      border-radius: 16px;
+    }
+
+    .empty-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .empty-description {
+      color: var(--text-secondary);
+      margin-bottom: 2rem;
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+      .objects-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+      }
+
+      .card-actions {
+        flex-direction: column;
+      }
+
+      .btn-small {
+        width: 100%;
+      }
+    }
+  </style>
+
+  <script>
+    const showFormBtn = document.getElementById('show-form-btn');
+    const showFormBtnEmpty = document.getElementById('show-form-btn-empty');
+    const form = document.getElementById('add-object-form');
+
+    function toggleForm() {
+      form.classList.toggle('show');
+      if (form.classList.contains('show')) {
+        showFormBtn.innerHTML = '❌ Скрыть форму';
+        showFormBtn.classList.remove('btn-accent');
+        showFormBtn.classList.add('btn-danger');
+      } else {
+        showFormBtn.innerHTML = '✨ Добавить объект';
+        showFormBtn.classList.remove('btn-danger');
+        showFormBtn.classList.add('btn-accent');
+      }
+    }
+
+    showFormBtn.addEventListener('click', toggleForm);
+    if (showFormBtnEmpty) {
+      showFormBtnEmpty.addEventListener('click', toggleForm);
+    }
+
+    function hideForm() {
+      form.classList.remove('show');
+      showFormBtn.innerHTML = '✨ Добавить объект';
+      showFormBtn.classList.remove('btn-danger');
+      showFormBtn.classList.add('btn-accent');
+    }
+
+    function openObjectDetail(objectId) {
+      window.location.href = `/objects/${objectId}/`;
+    }
+
+    function switchTab(tabName) {
+      // Скрыть все вкладки
+      document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+      });
+      
+      // Убрать активный класс с кнопок
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Показать выбранную вкладку
+      document.getElementById(tabName + '-tab').classList.add('active');
+      
+      // Активировать кнопку
+      event.target.classList.add('active');
+    }
+
+    // Анимация появления карточек
+    document.addEventListener('DOMContentLoaded', function() {
+      const cards = document.querySelectorAll('.object-card');
+      cards.forEach((card, index) => {
+        card.style.opacity = '0';
+        card.style.transform = 'translateY(30px)';
+        setTimeout(() => {
+          card.style.transition = 'all 0.6s ease';
+          card.style.opacity = '1';
+          card.style.transform = 'translateY(0)';
+        }, index * 150);
+      });
+    });
+
+    // Валидация формы
+    document.getElementById('add-object-form').addEventListener('submit', function(e) {
+      const name = document.getElementById('name').value.trim();
+      const address = document.getElementById('address').value.trim();
+      
+      if (!name || !address) {
+        e.preventDefault();
+        alert('⚠️ Пожалуйста, заполните все обязательные поля!');
+        return false;
+      }
+      
+      // Показываем индикатор загрузки
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.innerHTML;
+      submitBtn.innerHTML = '<span class="loading"></span> Создание...';
+      submitBtn.disabled = true;
+    });
+  </script>
+</body>
+</html>

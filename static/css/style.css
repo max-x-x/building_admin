@@ -1,0 +1,437 @@
+/* Космическая админ-панель - CSS стили */
+:root {
+  --bg-primary: #0f1114;
+  --bg-panel: #171a1f;
+  --brand-orange: #ff8a00;
+  --accent-green: #22c55e;
+  --danger-red: #ef4444;
+  --warn-yellow: #eab308;
+  --border-color: #262b33;
+  --chip-bg: #1f232b;
+  --text-primary: #ffffff;
+  --text-secondary: #a0a0a0;
+  --text-muted: #6b7280;
+  --gradient-primary: linear-gradient(135deg, #ff8a00 0%, #ff6b35 100%);
+  --gradient-secondary: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  --shadow-glow: 0 0 20px rgba(255, 138, 0, 0.3);
+  --shadow-panel: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* Космический фон с анимацией */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 138, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(234, 179, 8, 0.05) 0%, transparent 50%);
+  animation: cosmicFloat 20s ease-in-out infinite;
+  z-index: -1;
+}
+
+@keyframes cosmicFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(1deg); }
+}
+
+/* Основные контейнеры */
+.page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+}
+
+.panel {
+  background: var(--bg-panel);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 2rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow-panel);
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--gradient-primary);
+  opacity: 0.6;
+}
+
+/* Заголовки */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+h1 {
+  font-size: 2.5rem;
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+h2 {
+  font-size: 1.8rem;
+  color: var(--brand-orange);
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 0.5rem;
+}
+
+/* Таблицы */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 2rem 0;
+  background: var(--bg-panel);
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: var(--shadow-panel);
+}
+
+.table th {
+  background: var(--gradient-primary);
+  color: var(--text-primary);
+  padding: 1.2rem 1.5rem;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-size: 0.9rem;
+}
+
+.table td {
+  padding: 1.2rem 1.5rem;
+  border-bottom: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  transition: all 0.3s ease;
+}
+
+.table tbody tr {
+  transition: all 0.3s ease;
+}
+
+.table tbody tr:hover {
+  background: var(--chip-bg);
+  transform: translateX(4px);
+}
+
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Кнопки */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1.5rem;
+  margin: 0.5rem;
+  border: none;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-decoration: none;
+  position: relative;
+  overflow: hidden;
+  min-width: 120px;
+}
+
+.btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.btn:hover::before {
+  left: 100%;
+}
+
+.btn-primary {
+  background: var(--gradient-primary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 15px rgba(255, 138, 0, 0.3);
+}
+
+.btn-primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(255, 138, 0, 0.4);
+}
+
+.btn-accent {
+  background: var(--gradient-secondary);
+  color: var(--text-primary);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.btn-accent:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+}
+
+.btn-danger {
+  background: var(--danger-red);
+  color: var(--text-primary);
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+}
+
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4);
+}
+
+.btn-warn {
+  background: var(--warn-yellow);
+  color: var(--bg-primary);
+  box-shadow: 0 4px 15px rgba(234, 179, 8, 0.3);
+}
+
+.btn-warn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(234, 179, 8, 0.4);
+}
+
+/* Формы */
+.form-group {
+  margin-bottom: 1.5rem;
+}
+
+label {
+  display: block;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: 0.95rem;
+}
+
+input, select, textarea {
+  width: 100%;
+  padding: 0.875rem 1rem;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+input:focus, select:focus, textarea:focus {
+  outline: none;
+  border-color: var(--brand-orange);
+  box-shadow: 0 0 0 3px rgba(255, 138, 0, 0.1);
+  background: var(--bg-panel);
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--text-muted);
+}
+
+/* Скрытые формы */
+#add-object-form {
+  display: none;
+  margin-top: 2rem;
+  padding: 2rem;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  box-shadow: var(--shadow-panel);
+}
+
+#add-object-form.show {
+  display: block;
+  animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Чипы и статусы */
+.chip {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background: var(--chip-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.chip-success {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: var(--accent-green);
+  color: var(--accent-green);
+}
+
+.chip-warning {
+  background: rgba(234, 179, 8, 0.1);
+  border-color: var(--warn-yellow);
+  color: var(--warn-yellow);
+}
+
+.chip-danger {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: var(--danger-red);
+  color: var(--danger-red);
+}
+
+/* Навигация */
+.nav-links {
+  display: flex;
+  gap: 1rem;
+  margin: 2rem 0;
+  flex-wrap: wrap;
+}
+
+.nav-links .btn {
+  margin: 0;
+  flex: 1;
+  min-width: 150px;
+}
+
+/* Адаптивность */
+@media (max-width: 768px) {
+  .page {
+    padding: 1rem;
+  }
+  
+  .panel {
+    padding: 1.5rem;
+  }
+  
+  h1 {
+    font-size: 2rem;
+  }
+  
+  .table {
+    font-size: 0.9rem;
+  }
+  
+  .table th,
+  .table td {
+    padding: 0.8rem 1rem;
+  }
+  
+  .nav-links {
+    flex-direction: column;
+  }
+  
+  .nav-links .btn {
+    flex: none;
+  }
+}
+
+/* Анимации загрузки */
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--border-color);
+  border-radius: 50%;
+  border-top-color: var(--brand-orange);
+  animation: spin 1s ease-in-out infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Уведомления */
+.messages {
+  position: fixed;
+  top: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  max-width: 400px;
+}
+
+.message {
+  padding: 1rem 1.5rem;
+  margin-bottom: 1rem;
+  border-radius: 10px;
+  box-shadow: var(--shadow-panel);
+  animation: slideInRight 0.3s ease-out;
+}
+
+.message.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid var(--accent-green);
+  color: var(--accent-green);
+}
+
+.message.error {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid var(--danger-red);
+  color: var(--danger-red);
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Специальные эффекты */
+.glow-effect {
+  box-shadow: var(--shadow-glow);
+}
+
+.pulse {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255, 138, 0, 0.7); }
+  70% { box-shadow: 0 0 0 10px rgba(255, 138, 0, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(255, 138, 0, 0); }
+}

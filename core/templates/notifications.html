@@ -1,0 +1,431 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Уведомления - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>🔔 Система Уведомлений</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+        Управление уведомлениями и оповещениями
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>📤 Отправить уведомление</h2>
+      
+      <form class="notification-form">
+        <div class="form-group">
+          <label for="recipient_type">👥 Получатели</label>
+          {{ form.recipient_type }}
+          {% if form.recipient_type.errors %}
+            <div class="field-error">{{ form.recipient_type.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group" id="specific-user-group" style="display: none;">
+          <label for="specific_user">👤 Выберите пользователя</label>
+          {{ form.specific_user }}
+          {% if form.specific_user.errors %}
+            <div class="field-error">{{ form.specific_user.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="notification_type">📋 Тип уведомления</label>
+          {{ form.notification_type }}
+          {% if form.notification_type.errors %}
+            <div class="field-error">{{ form.notification_type.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="title">📝 Заголовок</label>
+          {{ form.title }}
+          {% if form.title.errors %}
+            <div class="field-error">{{ form.title.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-group">
+          <label for="message">💬 Сообщение</label>
+          {{ form.message }}
+          {% if form.message.errors %}
+            <div class="field-error">{{ form.message.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent">
+            🚀 Отправить уведомление
+          </button>
+          <button type="button" class="btn btn-primary" onclick="previewNotification()">
+            👁️ Предварительный просмотр
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Статистика уведомлений</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📤</div>
+          <div class="stat-number">{{ today_count }}</div>
+          <div class="stat-label">Отправлено сегодня</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-number">{{ total_count }}</div>
+          <div class="stat-label">Всего отправлено</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🚨</div>
+          <div class="stat-number">{{ urgent_count }}</div>
+          <div class="stat-label">Срочных уведомлений</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">ℹ️</div>
+          <div class="stat-number">{{ info_count }}</div>
+          <div class="stat-label">Информационных</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 Последние уведомления</h2>
+      <div class="notifications-list">
+        {% for notification in recent_notifications %}
+        <div class="notification-item {% if notification.notification_type == 'urgent' %}urgent{% endif %}">
+          <div class="notification-icon">
+            {% if notification.notification_type == 'info' %}ℹ️
+            {% elif notification.notification_type == 'urgent' %}🚨
+            {% elif notification.notification_type == 'warning' %}⚠️
+            {% elif notification.notification_type == 'success' %}✅
+            {% endif %}
+          </div>
+          <div class="notification-content">
+            <div class="notification-title">{{ notification.title }}</div>
+            <div class="notification-message">{{ notification.message }}</div>
+            <div class="notification-meta">
+              <span class="notification-time">{{ notification.sent_at|date:"d.m.Y H:i" }}</span>
+              <span class="notification-recipients">
+                {% if notification.recipient_type == 'specific' and notification.specific_user_name %}
+                  👤 {{ notification.specific_user_name }}
+                {% else %}
+                  {{ notification.get_recipient_type_display }}
+                {% endif %}
+              </span>
+            </div>
+          </div>
+          <div class="notification-stats">
+            <div class="read-stats">👁️ {{ notification.read_count }}/{{ notification.total_recipients }}</div>
+            <div class="delivery-stats">⏱️ {{ notification.delivery_time }}с</div>
+          </div>
+        </div>
+        {% empty %}
+        <div class="empty-notifications">
+          <div class="empty-icon">📧</div>
+          <div class="empty-text">Уведомления не найдены</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+
+    <div class="nav-links">
+      <a href="{% url 'dashboard' %}" class="btn btn-primary">
+        ← Назад к дашборду
+      </a>
+    </div>
+  </div>
+
+  <style>
+    .notification-form {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .form-actions .btn {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .stat-card {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .stat-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+    }
+
+    .stat-number {
+      font-size: 2rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .notifications-list {
+      margin-top: 2rem;
+    }
+
+    .notification-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 1rem;
+      padding: 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .notification-item:hover {
+      transform: translateX(5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .notification-item.urgent {
+      border-left: 4px solid var(--danger-red);
+      background: rgba(239, 68, 68, 0.05);
+    }
+
+    .notification-icon {
+      font-size: 1.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .notification-content {
+      flex: 1;
+    }
+
+    .notification-title {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+    }
+
+    .notification-message {
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+      line-height: 1.5;
+    }
+
+    .notification-meta {
+      display: flex;
+      gap: 1rem;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+    }
+
+    .notification-status {
+      margin-top: 0.5rem;
+    }
+
+    .notification-stats {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      align-items: flex-end;
+    }
+
+    .read-stats,
+    .delivery-stats {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      background: var(--chip-bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 12px;
+    }
+
+    .chip-info {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: #3b82f6;
+      color: #3b82f6;
+    }
+
+    .chip-urgent {
+      background: rgba(239, 68, 68, 0.1);
+      border-color: var(--danger-red);
+      color: var(--danger-red);
+    }
+
+    .chip-warning {
+      background: rgba(234, 179, 8, 0.1);
+      border-color: var(--warn-yellow);
+      color: var(--warn-yellow);
+    }
+
+    .chip-success {
+      background: rgba(34, 197, 94, 0.1);
+      border-color: var(--accent-green);
+      color: var(--accent-green);
+    }
+
+    #specific-user-group {
+      transition: all 0.3s ease;
+    }
+
+    #specific-user-group.show {
+      display: block !important;
+      animation: slideDown 0.3s ease;
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 768px) {
+      .notification-item {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .form-actions .btn {
+        flex: none;
+      }
+    }
+  </style>
+
+  <script>
+    function previewNotification() {
+      const title = document.getElementById('title').value;
+      const message = document.getElementById('message').value;
+      const type = document.getElementById('type').value;
+      
+      if (!title || !message) {
+        alert('⚠️ Пожалуйста, заполните заголовок и сообщение для предварительного просмотра');
+        return;
+      }
+
+      const typeIcons = {
+        'info': 'ℹ️',
+        'warning': '⚠️',
+        'error': '❌',
+        'success': '✅',
+        'urgent': '🚨'
+      };
+
+      const preview = `
+        <div style="background: var(--chip-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <span style="font-size: 1.5rem;">${typeIcons[type]}</span>
+            <h3 style="margin: 0; color: var(--text-primary);">${title}</h3>
+          </div>
+          <p style="color: var(--text-secondary); margin: 0; line-height: 1.5;">${message}</p>
+        </div>
+      `;
+
+      alert('Предварительный просмотр:\n\n' + title + '\n\n' + message);
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+      // Показ/скрытие поля выбора пользователя
+      const recipientTypeSelect = document.getElementById('id_recipient_type');
+      const specificUserGroup = document.getElementById('specific-user-group');
+      
+      if (recipientTypeSelect && specificUserGroup) {
+        recipientTypeSelect.addEventListener('change', function() {
+          if (this.value === 'specific') {
+            specificUserGroup.classList.add('show');
+            specificUserGroup.style.display = 'block';
+          } else {
+            specificUserGroup.classList.remove('show');
+            specificUserGroup.style.display = 'none';
+          }
+        });
+      }
+
+      // Анимация появления элементов
+      const items = document.querySelectorAll('.stat-card, .notification-item');
+      items.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          item.style.transition = 'all 0.5s ease';
+          item.style.opacity = '1';
+          item.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+
+      // Валидация формы
+      const form = document.querySelector('.notification-form');
+      form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const title = document.getElementById('title').value.trim();
+        const message = document.getElementById('message').value.trim();
+        
+        if (!title || !message) {
+          alert('⚠️ Пожалуйста, заполните все обязательные поля!');
+          return false;
+        }
+
+        // Показываем индикатор загрузки
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="loading"></span> Отправка...';
+        submitBtn.disabled = true;
+
+        setTimeout(() => {
+          alert('✅ Уведомление успешно отправлено!');
+          form.reset();
+          submitBtn.innerHTML = originalText;
+          submitBtn.disabled = false;
+        }, 2000);
+      });
+    });
+  </script>
+</body>
+</html>
+</html>

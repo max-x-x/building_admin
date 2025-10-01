@@ -1,0 +1,265 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Приглашения - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>📧 Система Приглашений</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+        Пригласите новых пользователей в космическую команду
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>✨ Отправить приглашение</h2>
+      
+      <form method="post" class="invitation-form">
+        {% csrf_token %}
+        
+        {% if messages %}
+          {% for message in messages %}
+            <div class="message {{ message.tags }}">
+              {{ message }}
+            </div>
+          {% endfor %}
+        {% endif %}
+
+        <div class="form-group">
+          <label for="role">🎭 Роль пользователя</label>
+          <select name="role" id="role" required>
+            <option value="">Выберите роль</option>
+            <option value="ССК">🚀 ССК (Старший Строительный Контролер)</option>
+            <option value="ИКО">📋 ИКО (Инженер Контроля Объектов)</option>
+            <option value="Прораб">🔧 Прораб (Производственный Работник)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="email">📧 Email адрес</label>
+          <input type="email" name="email" id="email" placeholder="user@example.com" required>
+        </div>
+
+        <div class="form-group">
+          <label for="message">💬 Персональное сообщение (необязательно)</label>
+          <textarea name="message" id="message" rows="3" placeholder="Добавьте персональное сообщение к приглашению..."></textarea>
+        </div>
+
+        <div class="form-actions">
+          <button type="submit" class="btn btn-accent">
+            🚀 Отправить приглашение
+          </button>
+          <a href="{% url 'dashboard' %}" class="btn btn-primary">
+            ← Назад к дашборду
+          </a>
+        </div>
+      </form>
+    </div>
+
+    <div class="panel">
+      <h2>📊 Статистика приглашений</h2>
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-number">{{ today_count }}</div>
+          <div class="stat-label">Отправлено сегодня</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ total_count }}</div>
+          <div class="stat-label">Всего отправлено</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ ssk_count }}</div>
+          <div class="stat-label">ССК приглашений</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-number">{{ iko_count }}</div>
+          <div class="stat-label">ИКО приглашений</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📋 Последние приглашения</h2>
+      <div class="invitations-list">
+        {% for invitation in recent_invitations %}
+        <div class="invitation-item">
+          <div class="invitation-info">
+            <div class="invitation-email">{{ invitation.email }}</div>
+            <div class="invitation-role chip chip-success">{{ invitation.role }}</div>
+          </div>
+          <div class="invitation-date">{{ invitation.created_at|date:"d.m.Y H:i" }}</div>
+        </div>
+        {% empty %}
+        <div class="empty-invitations">
+          <div class="empty-icon">📧</div>
+          <div class="empty-text">Приглашения не найдены</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .invitation-form {
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    .form-actions {
+      display: flex;
+      gap: 1rem;
+      margin-top: 2rem;
+      flex-wrap: wrap;
+    }
+
+    .form-actions .btn {
+      flex: 1;
+      min-width: 200px;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .stat-item {
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s ease;
+    }
+
+    .stat-item:hover {
+      transform: translateY(-5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .stat-number {
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--brand-orange);
+      margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .invitations-list {
+      margin-top: 2rem;
+    }
+
+    .invitation-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      margin-bottom: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .invitation-item:hover {
+      transform: translateX(5px);
+      box-shadow: var(--shadow-panel);
+    }
+
+    .invitation-info {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .invitation-email {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .invitation-date {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .empty-invitations {
+      text-align: center;
+      padding: 3rem 2rem;
+      color: var(--text-muted);
+    }
+
+    .empty-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+
+    .empty-text {
+      font-size: 1.1rem;
+    }
+
+    @media (max-width: 768px) {
+      .invitation-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+      }
+
+      .form-actions {
+        flex-direction: column;
+      }
+
+      .form-actions .btn {
+        flex: none;
+      }
+    }
+  </style>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      // Анимация появления элементов
+      const items = document.querySelectorAll('.stat-item, .invitation-item');
+      items.forEach((item, index) => {
+        item.style.opacity = '0';
+        item.style.transform = 'translateY(20px)';
+        setTimeout(() => {
+          item.style.transition = 'all 0.5s ease';
+          item.style.opacity = '1';
+          item.style.transform = 'translateY(0)';
+        }, index * 100);
+      });
+
+      // Валидация формы
+      const form = document.querySelector('.invitation-form');
+      form.addEventListener('submit', function(e) {
+        const email = document.getElementById('email').value.trim();
+        const role = document.getElementById('role').value;
+        
+        if (!email || !role) {
+          e.preventDefault();
+          alert('⚠️ Пожалуйста, заполните все обязательные поля!');
+          return false;
+        }
+
+        // Показываем индикатор загрузки
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="loading"></span> Отправка...';
+        submitBtn.disabled = true;
+      });
+    });
+  </script>
+</body>
+</html>
