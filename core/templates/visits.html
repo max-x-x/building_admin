@@ -24,41 +24,57 @@
           <div class="stat-icon">📍</div>
           <div class="stat-number">{{ total_visits }}</div>
           <div class="stat-label">Всего посещений</div>
-          <div class="stat-trend">
-            <span class="trend-icon">📈</span>
-            <span class="trend-text">+12 за неделю</span>
-          </div>
-        </div>
-        <div class="stat-card completed">
-          <div class="stat-icon">✅</div>
-          <div class="stat-number">{{ completed_visits }}</div>
-          <div class="stat-label">Завершено</div>
-          <div class="stat-progress">
-            <div class="progress-bar">
-              <div class="progress-fill completed" style="width: 87%"></div>
-            </div>
-            <span class="progress-text">87%</span>
-          </div>
-        </div>
-        <div class="stat-card scheduled">
-          <div class="stat-icon">📅</div>
-          <div class="stat-number">{{ scheduled_visits }}</div>
-          <div class="stat-label">Запланировано</div>
-          <div class="stat-progress">
-            <div class="progress-bar">
-              <div class="progress-fill scheduled" style="width: 13%"></div>
-            </div>
-            <span class="progress-text">13%</span>
-          </div>
         </div>
       </div>
     </div>
 
     <div class="panel">
-      <h2>📋 Журнал посещений</h2>
+      <div class="panel-header">
+        <h2>📋 Журнал посещений</h2>
+        <button type="button" class="btn btn-primary" onclick="openCreateVisit()">+ Добавить посещение</button>
+      </div>
+
+      <form method="get" class="filters">
+        <div class="search-row">
+          <input type="text" name="q" value="{{ q }}" placeholder="ФИО, email, объект" class="search-input">
+        </div>
+        <div class="filters-grid">
+          <div class="field">
+            <label>Роль</label>
+            <select name="role">
+              <option value="all" {% if role == 'all' %}selected{% endif %}>Все</option>
+              <option value="ССК" {% if role == 'ССК' %}selected{% endif %}>ССК</option>
+              <option value="ИКО" {% if role == 'ИКО' %}selected{% endif %}>ИКО</option>
+              <option value="Прораб" {% if role == 'Прораб' %}selected{% endif %}>Прораб</option>
+              <option value="Админ" {% if role == 'Админ' %}selected{% endif %}>Админ</option>
+            </select>
+          </div>
+          <div class="field">
+            <label>С даты</label>
+            <input type="date" name="date_from" value="{{ date_from }}">
+          </div>
+          <div class="field">
+            <label>По дату</label>
+            <input type="date" name="date_to" value="{{ date_to }}">
+          </div>
+          <div class="field">
+            <label>Сортировка</label>
+            <select name="sort">
+              <option value="date_desc" {% if sort == 'date_desc' %}selected{% endif %}>По дате (новые сначала)</option>
+              <option value="date_asc" {% if sort == 'date_asc' %}selected{% endif %}>По дате (старые сначала)</option>
+              <option value="name_asc" {% if sort == 'name_asc' %}selected{% endif %}>По имени (А→Я)</option>
+              <option value="name_desc" {% if sort == 'name_desc' %}selected{% endif %}>По имени (Я→А)</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btn btn-primary">Применить</button>
+          <a href="?" class="btn">Сбросить</a>
+        </div>
+      </form>
       <div class="visits-timeline">
         {% for visit in visits %}
-        <div class="visit-card {{ visit.status }}" onclick="openVisitDetail({{ visit.id }})">
+        <div class="visit-card {{ visit.status }}">
           <div class="visit-timeline">
             <div class="timeline-dot"></div>
             <div class="timeline-line"></div>
@@ -68,22 +84,20 @@
             <div class="visit-header">
               <div class="visit-person">
                 <div class="person-avatar">
-                  {{ visit.fio|first }}
+                  {{ visit.user_fio|first }}
                 </div>
                 <div class="person-info">
-                  <div class="person-name">{{ visit.fio }}</div>
+                  <div class="person-name">{{ visit.user_fio }}</div>
+                  <div class="person-email">{{ visit.user_email }}</div>
                   <div class="person-role">
                     <span class="role-badge role-{{ visit.role|lower }}">{{ visit.role }}</span>
                   </div>
                 </div>
               </div>
               
-              <div class="visit-status">
-                {% if visit.status == 'completed' %}
-                  <span class="status-badge completed">✅ Завершено</span>
-                {% else %}
-                  <span class="status-badge scheduled">📅 Запланировано</span>
-                {% endif %}
+              <div class="visit-date-header">
+                <span class="date-icon">📅</span>
+                <span class="date-text">{{ visit.visit_date }}</span>
               </div>
             </div>
             
@@ -91,27 +105,12 @@
               <div class="visit-object">
                 <div class="object-icon">🏗️</div>
                 <div class="object-info">
-                  <div class="object-name">{{ visit.object }}</div>
-                  <div class="visit-purpose">{{ visit.purpose }}</div>
+                  <div class="object-name">{{ visit.object_name }}</div>
+                  <div class="object-address">{{ visit.object_address }}</div>
                 </div>
               </div>
               
-              <div class="visit-meta">
-                <div class="visit-date">
-                  <div class="date-info">
-                    <span class="date-icon">📅</span>
-                    <span class="date-text">{{ visit.visit_date }}</span>
-                  </div>
-                </div>
-              </div>
             </div>
-            
-            {% if visit.notes %}
-            <div class="visit-notes">
-              <div class="notes-icon">📝</div>
-              <div class="notes-text">{{ visit.notes }}</div>
-            </div>
-            {% endif %}
           </div>
         </div>
         {% empty %}
@@ -144,7 +143,82 @@
     </div>
   </div>
 
+  <!-- Модальное окно создания посещения -->
+  <div id="createVisitModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Добавить посещение</h2>
+        <button class="close-btn" onclick="closeCreateVisit()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form method="post" class="create-form">
+          {% csrf_token %}
+          <div class="field">
+            <label>Пользователь</label>
+            <select name="user_id" id="create_user_id" required onchange="syncRole()">
+              <option value="" disabled selected>Выберите пользователя</option>
+              {% for u in users_options %}
+              <option value="{{ u.id }}" data-role="{{ u.role }}">{{ u.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Роль</label>
+            <input type="text" name="user_role" id="create_user_role" readonly placeholder="Определится автоматически">
+          </div>
+          <div class="field">
+            <label>Объект</label>
+            <select name="object_id" required>
+              <option value="" disabled selected>Выберите объект</option>
+              {% for o in objects_options %}
+              <option value="{{ o.id }}">{{ o.label }}</option>
+              {% endfor %}
+            </select>
+          </div>
+          <div class="field">
+            <label>Дата</label>
+            <input type="date" name="visit_date" required>
+          </div>
+          <div class="actions">
+            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="button" class="btn" onclick="closeCreateVisit()">Отмена</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
   <style>
+    .filters { margin: 1rem 0 2rem; width: 100%; }
+    .search-row { width: 100%; margin-bottom: 0.75rem; }
+    .search-input { width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary); font-size: 1rem; }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 1rem;
+      align-items: end;
+      width: 100%;
+    }
+    .field label { display: block; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-secondary); }
+    .field input, .field select {
+      width: 100%; padding: 0.6rem 0.8rem; border-radius: 10px;
+      border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary);
+    }
+    .actions { display: flex; gap: 0.75rem; justify-content: flex-start; flex-wrap: wrap; margin-top: 0.75rem; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; padding: 0.6rem 1rem; border-radius: 10px; border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary); text-decoration: none; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .btn:hover { transform: translateY(-1px); box-shadow: 0 6px 14px rgba(0,0,0,0.15); }
+    .btn-primary { background: var(--brand-orange); color: #fff; border-color: transparent; }
+    .btn-primary:hover { filter: brightness(0.95); }
+    .filters { margin: 1rem 0 2rem; }
+    .filters-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 1rem;
+      align-items: end;
+    }
+    .field label { display: block; font-weight: 600; margin-bottom: 0.4rem; color: var(--text-secondary); }
+    .field input, .field select { width: 100%; padding: 0.6rem 0.8rem; border-radius: 10px; border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary); }
+    .actions { display: flex; gap: 0.75rem; }
     .visits-stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
@@ -391,6 +465,26 @@
       margin-bottom: 1.5rem;
     }
 
+    .visit-date-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--chip-bg);
+      padding: 0.5rem 1rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .visit-date-header .date-icon {
+      font-size: 1rem;
+    }
+
+    .visit-date-header .date-text {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
     .visit-person {
       display: flex;
       align-items: center;
@@ -629,6 +723,9 @@
       font-size: 1.8rem;
       font-weight: 700;
     }
+    .panel-header { display:flex; align-items:center; justify-content: space-between; gap: 1rem; }
+    .create-form .field { margin-bottom: 1rem; }
+    .create-form select, .create-form input { width: 100%; padding: 0.7rem 0.9rem; border-radius: 10px; border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary); }
 
     .close-btn {
       background: none;
@@ -732,6 +829,15 @@
   </style>
 
   <script>
+    function openCreateVisit(){ document.getElementById('createVisitModal').style.display = 'block'; }
+    function closeCreateVisit(){ document.getElementById('createVisitModal').style.display = 'none'; }
+    function syncRole(){
+      const sel = document.getElementById('create_user_id');
+      const role = sel.options[sel.selectedIndex]?.dataset?.role || '';
+      const roleMap = { 'foreman':'Прораб', 'ssk':'ССК', 'iko':'ИКО', 'admin':'Админ' };
+      document.getElementById('create_user_role').value = roleMap[role] || role || '';
+      document.querySelector('input[name="user_role"]').value = role || '';
+    }
     // Заглушка API для получения детальной информации о посещении
     async function getVisitDetail(visitId) {
       // Имитируем запрос к API
@@ -866,4 +972,5 @@
     });
   </script>
 </body>
+</html>
 </html>

@@ -21,24 +21,24 @@
       <h2>📊 Статистика системы</h2>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
         <div class="stat-card">
-          <div class="stat-icon">📋</div>
-          <div class="stat-number">342</div>
-          <div class="stat-label">Задач выполнено</div>
+          <div class="stat-icon">🔧</div>
+          <div class="stat-number">{{ working_modules_count }}</div>
+          <div class="stat-label">Модулей работает</div>
         </div>
         <div class="stat-card">
           <div class="stat-icon">🏗️</div>
-          <div class="stat-number">89</div>
+          <div class="stat-number">{{ active_objects }}</div>
           <div class="stat-label">Объектов в работе</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">⚠️</div>
-          <div class="stat-number">156</div>
-          <div class="stat-label">Всего нарушений</div>
+          <div class="stat-icon">📍</div>
+          <div class="stat-number">{{ today_visits }}</div>
+          <div class="stat-label">Посещений сегодня</div>
         </div>
         <div class="stat-card">
-          <div class="stat-icon">📦</div>
-          <div class="stat-number">89</div>
-          <div class="stat-label">Всего поставок</div>
+          <div class="stat-icon">👥</div>
+          <div class="stat-number">{{ total_users }}</div>
+          <div class="stat-label">Всего пользователей</div>
         </div>
       </div>
     </div>
@@ -81,15 +81,9 @@
           <div class="card-icon">🏗️</div>
           <h3>Объекты</h3>
           <p>Управление строительными объектами</p>
-          <div class="card-status chip chip-success">89 активных</div>
+          <div class="card-status chip chip-success">{{ active_objects }} активных</div>
         </a>
 
-        <a href="{% url 'logs' %}" class="dashboard-card">
-          <div class="card-icon">📊</div>
-          <h3>Логи системы</h3>
-          <p>Мониторинг и анализ событий</p>
-          <div class="card-status chip chip-warning">{{ today_logs }} сегодня</div>
-        </a>
 
         <a href="{% url 'notifications' %}" class="dashboard-card">
           <div class="card-icon">🔔</div>
@@ -109,7 +103,7 @@
           <div class="card-icon">📍</div>
           <h3>Посещения</h3>
           <p>Отслеживание посещений объектов</p>
-          <div class="card-status chip chip-warning">156 сегодня</div>
+          <div class="card-status chip chip-warning">{{ today_visits }} сегодня</div>
         </a>
 
         <a href="{% url 'memos' %}" class="dashboard-card">
@@ -119,11 +113,18 @@
           <div class="card-status chip chip-success">{{ total_memos }} всего</div>
         </a>
 
+        <a href="{% url 'deliveries' %}" class="dashboard-card">
+          <div class="card-icon">📦</div>
+          <h3>Поставки</h3>
+          <p>Управление поставками материалов</p>
+          <div class="card-status chip chip-info">0 поставок</div>
+        </a>
+
     <a href="{% url 'laboratory' %}" class="dashboard-card">
       <div class="card-icon">🧪</div>
       <h3>Лаборатория</h3>
       <p>Экспериментальные функции и тестирование</p>
-      <div class="card-status chip chip-danger">12 нарушений</div>
+      <div class="card-status chip chip-danger">{{ laboratory_count }} элементов</div>
     </a>
     
       </div>
@@ -146,41 +147,8 @@
       </div>
     </div>
 
-    <div class="panel">
-      <h2>📊 Аналитика и диаграммы</h2>
-      <div class="charts-grid">
-        <div class="chart-container">
-          <h3>📈 Выполненные работы</h3>
-          <div class="chart" id="worksChart">
-            <canvas id="worksCanvas" width="300" height="200"></canvas>
-          </div>
-        </div>
-        
-        <div class="chart-container">
-          <h3>⚠️ Нарушения по объектам</h3>
-          <div class="chart" id="violationsChart">
-            <canvas id="violationsCanvas" width="300" height="200"></canvas>
-          </div>
-        </div>
-        
-        <div class="chart-container">
-          <h3>🧪 Лабораторные данные</h3>
-          <div class="chart" id="labChart">
-            <canvas id="labCanvas" width="300" height="200"></canvas>
-          </div>
-        </div>
-        
-        <div class="chart-container">
-          <h3>🔗 Нарушения vs Работы</h3>
-          <div class="chart" id="correlationChart">
-            <canvas id="correlationCanvas" width="300" height="200"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     .stat-card {
       background: var(--chip-bg);
@@ -323,46 +291,6 @@
       color: var(--danger-red);
     }
 
-    .charts-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-
-    .chart-container {
-      background: var(--panel-bg);
-      border: 1px solid var(--border-color);
-      border-radius: 16px;
-      padding: 1.5rem;
-      text-align: center;
-      transition: all 0.3s ease;
-    }
-
-    .chart-container:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
-    }
-
-    .chart-container h3 {
-      color: var(--text-primary);
-      margin: 0 0 1rem 0;
-      font-size: 1.1rem;
-      font-weight: 600;
-    }
-
-    .chart {
-      position: relative;
-      height: 200px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .chart canvas {
-      max-width: 100%;
-      max-height: 100%;
-    }
 
     @media (max-width: 768px) {
       .dashboard-grid {
@@ -446,198 +374,6 @@
       }, 2000);
     }
 
-    // Инициализация диаграмм
-    document.addEventListener('DOMContentLoaded', function() {
-      // 1. Диаграмма выполненных работ (круговая)
-      const worksCtx = document.getElementById('worksCanvas').getContext('2d');
-      new Chart(worksCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Выполнено', 'В процессе', 'Ожидает'],
-          datasets: [{
-            data: [75, 15, 10],
-            backgroundColor: [
-              '#22c55e',
-              '#eab308', 
-              '#6b7280'
-            ],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: {
-                color: '#e5e7eb'
-              }
-            }
-          }
-        }
-      });
-
-      // 2. Нарушения по объектам (столбчатая)
-      const violationsCtx = document.getElementById('violationsCanvas').getContext('2d');
-      new Chart(violationsCtx, {
-        type: 'bar',
-        data: {
-          labels: ['Объект #1', 'Объект #2', 'Объект #3', 'Объект #4', 'Объект #5'],
-          datasets: [{
-            label: 'Нарушения',
-            data: [3, 7, 2, 5, 1],
-            backgroundColor: '#ef4444',
-            borderColor: '#dc2626',
-            borderWidth: 1
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#e5e7eb'
-              }
-            }
-          }
-        }
-      });
-
-      // 3. Лабораторные данные (линейная)
-      const labCtx = document.getElementById('labCanvas').getContext('2d');
-      new Chart(labCtx, {
-        type: 'line',
-        data: {
-          labels: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн'],
-          datasets: [{
-            label: 'Нарушения',
-            data: [12, 19, 8, 15, 22, 18],
-            borderColor: '#ef4444',
-            backgroundColor: 'rgba(239, 68, 68, 0.1)',
-            tension: 0.4
-          }, {
-            label: 'Готово',
-            data: [8, 12, 15, 10, 18, 25],
-            borderColor: '#22c55e',
-            backgroundColor: 'rgba(34, 197, 94, 0.1)',
-            tension: 0.4
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            },
-            x: {
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#e5e7eb'
-              }
-            }
-          }
-        }
-      });
-
-      // 4. Корреляция нарушений и работ (точечная)
-      const correlationCtx = document.getElementById('correlationCanvas').getContext('2d');
-      new Chart(correlationCtx, {
-        type: 'scatter',
-        data: {
-          datasets: [{
-            label: 'Объекты',
-            data: [
-              {x: 10, y: 2},
-              {x: 15, y: 4},
-              {x: 8, y: 1},
-              {x: 20, y: 6},
-              {x: 12, y: 3},
-              {x: 18, y: 5},
-              {x: 14, y: 2},
-              {x: 16, y: 4}
-            ],
-            backgroundColor: '#ff8a00',
-            borderColor: '#ff6b35',
-            borderWidth: 2
-          }]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: 'Количество работ',
-                color: '#e5e7eb'
-              },
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            },
-            y: {
-              title: {
-                display: true,
-                text: 'Нарушения',
-                color: '#e5e7eb'
-              },
-              ticks: {
-                color: '#e5e7eb'
-              },
-              grid: {
-                color: '#374151'
-              }
-            }
-          },
-          plugins: {
-            legend: {
-              labels: {
-                color: '#e5e7eb'
-              }
-            }
-          }
-        }
-      });
-    });
   </script>
 </body>
 </html>

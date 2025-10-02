@@ -1,6 +1,6 @@
 from django.urls import path
 from django.contrib.auth import views as auth_views
-from .views import login_view, logout_view, dashboard, invitations, objects_page, object_detail, logs, notifications, users, visits, memos, laboratory, maintenance, api_create_ticket, api_get_tickets, api_reply_ticket, api_get_memos, api_create_memo
+from .views import login_view, logout_view, dashboard, invitations, objects_page, notifications, users, visits, memos, laboratory, maintenance, deliveries, api_create_ticket, api_get_tickets, api_reply_ticket, api_get_memos, api_create_memo
 from .monitoring import check_services_status
 from .forms import EmailLoginForm
 
@@ -12,13 +12,12 @@ urlpatterns = [
     path("dashboard/", dashboard, name="dashboard"),
     path("invitations/", invitations, name="invitations"),
     path("objects/", objects_page, name="objects"),
-    path("objects/<int:object_id>/", object_detail, name="object_detail"),
-    path("logs/", logs, name="logs"),
     path("notifications/", notifications, name="notifications"),
     path("users/", users, name="users"),
     path("visits/", visits, name="visits"),
     path("memos/", memos, name="memos"),
     path("laboratory/", laboratory, name="laboratory"),
+    path("deliveries/", deliveries, name="deliveries"),
     path("maintenance/", maintenance, name="maintenance"),
     
     # API эндпоинты

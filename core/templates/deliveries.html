@@ -1,0 +1,349 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Поставки - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>📦 Поставки</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+        Управление поставками материалов и оборудования
+      </p>
+      <div style="text-align: center;">
+        <a href="{% url 'dashboard' %}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'">
+          <span style="font-size: 1.2rem;">🏠</span>
+          <span>Вернуться на дашборд</span>
+        </a>
+      </div>
+    </div>
+
+
+    <div class="panel">
+      <h2>📋 Список поставок</h2>
+      
+      <!-- Фильтр и поиск -->
+      <div style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; border: 1px solid var(--border-color);">
+        <form method="GET" style="display: flex; gap: 1rem; align-items: end; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 200px;">
+            <label for="object_filter" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Фильтр по объекту</label>
+            <select id="object_filter" name="object_id" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+              <option value="">Все объекты</option>
+              {% for object in objects %}
+                <option value="{{ object.id }}" {% if object.id|stringformat:"s" == object_filter %}selected{% endif %}>
+                  {{ object.name }} (ID: {{ object.id }})
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+          
+          <div style="min-width: 120px;">
+            <label for="limit_select" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">На странице</label>
+            <select id="limit_select" name="limit" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+              <option value="10" {% if limit == 10 %}selected{% endif %}>10</option>
+              <option value="20" {% if limit == 20 %}selected{% endif %}>20</option>
+              <option value="50" {% if limit == 50 %}selected{% endif %}>50</option>
+              <option value="100" {% if limit == 100 %}selected{% endif %}>100</option>
+            </select>
+          </div>
+          
+          <div style="display: flex; gap: 0.75rem;">
+            <button type="submit" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 10px; font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(79, 172, 254, 0.3);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 5px 15px rgba(79, 172, 254, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(79, 172, 254, 0.3)'">
+              <span style="font-size: 1.1rem;">🔍</span>
+              <span>Применить</span>
+            </button>
+            <a href="{% url 'deliveries' %}" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.75rem 1.25rem; background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%); color: white; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 0.95rem; transition: all 0.3s ease; box-shadow: 0 3px 12px rgba(255, 107, 107, 0.3);" onmouseover="this.style.transform='translateY(-1px)'; this.style.boxShadow='0 5px 15px rgba(255, 107, 107, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 3px 12px rgba(255, 107, 107, 0.3)'">
+              <span style="font-size: 1.1rem;">🗑️</span>
+              <span>Сбросить</span>
+            </a>
+          </div>
+        </form>
+      </div>
+      
+      {% if deliveries %}
+        <div style="overflow-x: auto; margin: 2rem 0;">
+          <table style="width: 100%; border-collapse: collapse; background: var(--card-bg); border-radius: 12px; overflow: hidden; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);">
+            <thead>
+              <tr style="background: linear-gradient(135deg, var(--accent-color), var(--accent-hover)); color: white;">
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">ID</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">UUID</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">Объект</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">Планируемая дата</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">Статус</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">Адрес</th>
+                <th style="padding: 1rem; text-align: left; font-weight: 600;">Заметки</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for delivery in deliveries %}
+                <tr style="border-bottom: 1px solid var(--border-color); transition: background-color 0.2s;">
+                  <td style="padding: 1rem; font-family: 'Courier New', monospace; font-weight: 600; color: var(--accent-color);">#{{ delivery.id }}</td>
+                  <td style="padding: 1rem; font-family: 'Courier New', monospace; font-size: 0.9rem; color: var(--text-secondary);">
+                    <button type="button" class="copy-uuid" data-uuid="{{ delivery.uuid_delivery }}" title="Скопировать UUID" style="all: unset; cursor: pointer; color: var(--text-secondary);">
+                      {{ delivery.uuid_delivery|default:"—" }}
+                    </button>
+                  </td>
+                  <td style="padding: 1rem; font-weight: 600;">
+                    {% with oid=delivery.object %}
+                      {% for object in objects %}
+                        {% if object.id == oid %}
+                          {{ object.name }}
+                        {% endif %}
+                      {% endfor %}
+                    {% endwith %}
+                  </td>
+                  <td style="padding: 1rem;">
+                    <span style="background: var(--info-bg); color: var(--info-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem;">
+                      {{ delivery.planned_date }}
+                    </span>
+                  </td>
+                  <td style="padding: 1rem;">
+                    {% if delivery.status == 'scheduled' %}
+                      <span style="background: var(--warning-bg); color: var(--warning-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        📅 Запланировано
+                      </span>
+                    {% elif delivery.status == 'awaiting_lab' %}
+                      <span style="background: var(--info-bg); color: var(--info-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        🧪 В лаборатории
+                      </span>
+                    {% elif delivery.status == 'in_transit' %}
+                      <span style="background: var(--accent-bg); color: var(--accent-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        🚚 В пути
+                      </span>
+                    {% elif delivery.status == 'delivered' %}
+                      <span style="background: var(--success-bg); color: var(--success-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        ✅ Доставлено
+                      </span>
+                    {% elif delivery.status == 'cancelled' %}
+                      <span style="background: var(--danger-bg); color: var(--danger-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        ❌ Отменено
+                      </span>
+                    {% else %}
+                      <span style="background: var(--secondary-bg); color: var(--secondary-color); padding: 0.25rem 0.75rem; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                        ❓ {{ delivery.status }}
+                      </span>
+                    {% endif %}
+                  </td>
+                  <td style="padding: 1rem; color: var(--text-secondary); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    {% with oid=delivery.object %}
+                      {% for object in objects %}
+                        {% if object.id == oid %}
+                          {{ object.address|default:"Адрес не указан" }}
+                        {% endif %}
+                      {% endfor %}
+                    {% endwith %}
+                  </td>
+                  <td style="padding: 1rem;">
+                    <button type="button" class="btn btn-secondary note-btn" data-note="{{ delivery.notes|default:''|escape }}" style="padding: 0.4rem 0.9rem; border-radius: 10px;">
+                      Заметки
+                    </button>
+                  </td>
+                </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        
+        <!-- Пагинация -->
+        {% if total_pages > 1 %}
+          <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem; padding: 1rem; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color);">
+            <span style="color: var(--text-secondary); font-weight: 600;">
+              Страница {{ current_page }} из {{ total_pages }} ({{ total_deliveries }} поставок)
+            </span>
+            
+            <div style="display: flex; gap: 0.5rem;">
+              {% if has_prev %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset=0" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                  ⏮️ Первая
+                </a>
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ prev_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                  ⏪ Предыдущая
+                </a>
+              {% endif %}
+              
+              {% if has_next %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ next_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                  Следующая ⏩
+                </a>
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ last_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
+                  Последняя ⏭️
+                </a>
+              {% endif %}
+            </div>
+          </div>
+        {% endif %}
+      {% else %}
+        <div style="text-align: center; padding: 3rem; color: var(--text-secondary);">
+          <div style="font-size: 4rem; margin-bottom: 1rem;">📦</div>
+          <h3>Поставки не найдены</h3>
+          <p>В системе пока нет поставок или произошла ошибка загрузки данных</p>
+        </div>
+      {% endif %}
+    </div>
+
+    <div class="panel">
+      <h2>➕ Добавить поставку</h2>
+      <form id="deliveryForm" style="max-width: 600px; margin: 0 auto;">
+        {% csrf_token %}
+        <div style="margin-bottom: 1.5rem;">
+          <label for="object_id" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Объект *</label>
+          <select id="object_id" name="object_id" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+            <option value="">Выберите объект...</option>
+            {% for object in objects %}
+              <option value="{{ object.id }}">{{ object.name }} (ID: {{ object.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label for="planned_date" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Планируемая дата *</label>
+          <input type="date" id="planned_date" name="planned_date" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+          <label for="notes" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Заметки</label>
+          <textarea id="notes" name="notes" rows="4" placeholder="Дополнительная информация о поставке..." style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <button type="submit" class="btn btn-accent" style="flex: 1; max-width: 200px;">
+            📦 Создать поставку
+          </button>
+          <button type="button" id="cancelBtn" class="btn btn-secondary" style="flex: 1; max-width: 200px;">
+            ❌ Отмена
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+  <!-- Модал заметки -->
+  <div id="noteModal" class="modal" style="display:none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Заметка</h2>
+        <button class="close-btn" onclick="closeNoteModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <pre id="noteContent" style="white-space: pre-wrap; font-family: inherit; color: var(--text-primary);"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.getElementById('deliveryForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const formData = new FormData(this);
+      const submitBtn = this.querySelector('button[type="submit"]');
+      const originalText = submitBtn.textContent;
+      
+      submitBtn.textContent = '⏳ Создание...';
+      submitBtn.disabled = true;
+      
+      try {
+        const response = await fetch(window.location.href, {
+          method: 'POST',
+          body: formData
+        });
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+          const text = await response.text();
+          console.error('Неожиданный ответ сервера:', text);
+          throw new Error('Сервер вернул не JSON ответ');
+        }
+        
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ ' + result.message);
+          this.reset();
+          location.reload();
+        } else {
+          alert('❌ Ошибка: ' + result.error);
+        }
+      } catch (error) {
+        console.error('Ошибка:', error);
+        alert('❌ Ошибка: ' + error.message);
+      } finally {
+        submitBtn.textContent = originalText;
+        submitBtn.disabled = false;
+      }
+    });
+    
+    document.getElementById('cancelBtn').addEventListener('click', function() {
+      document.getElementById('deliveryForm').reset();
+    });
+
+    // Копирование UUID
+    document.querySelectorAll('.copy-uuid').forEach(function(btn){
+      btn.addEventListener('click', async function(){
+        const val = this.dataset.uuid || '';
+        try {
+          await navigator.clipboard.writeText(val);
+          this.textContent = val + '  ✓';
+          setTimeout(() => { this.textContent = val; }, 1200);
+        } catch(e) {}
+      });
+    });
+
+    // Модал заметки
+    const noteModal = document.getElementById('noteModal');
+    const noteContent = document.getElementById('noteContent');
+    function openNoteModal(text){
+      noteContent.textContent = text || '—';
+      noteModal.style.display = 'block';
+    }
+    function closeNoteModal(){ noteModal.style.display = 'none'; }
+    window.closeNoteModal = closeNoteModal;
+    document.querySelectorAll('.note-btn').forEach(function(btn){
+      btn.addEventListener('click', function(){ openNoteModal(this.dataset.note || '—'); });
+    });
+  </script>
+
+  <style>
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(8px);
+    }
+    .modal-content {
+      background: var(--panel-bg);
+      margin: 4% auto;
+      padding: 0;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 720px;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 25px 50px rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border-color);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid var(--border-color);
+      background: linear-gradient(135deg, var(--chip-bg), rgba(255, 138, 0, 0.05));
+    }
+    .modal-header h2 { margin: 0; }
+    #noteContent { padding: 1.5rem; }
+  </style>
+</body>
+</html>

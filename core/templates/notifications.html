@@ -20,7 +20,8 @@
     <div class="panel">
       <h2>📤 Отправить уведомление</h2>
       
-      <form class="notification-form">
+      <form class="notification-form" method="post">
+        {% csrf_token %}
         <div class="form-group">
           <label for="recipient_type">👥 Получатели</label>
           {{ form.recipient_type }}
@@ -29,13 +30,6 @@
           {% endif %}
         </div>
 
-        <div class="form-group" id="specific-user-group" style="display: none;">
-          <label for="specific_user">👤 Выберите пользователя</label>
-          {{ form.specific_user }}
-          {% if form.specific_user.errors %}
-            <div class="field-error">{{ form.specific_user.errors }}</div>
-          {% endif %}
-        </div>
 
         <div class="form-group">
           <label for="notification_type">📋 Тип уведомления</label>
@@ -64,9 +58,6 @@
         <div class="form-actions">
           <button type="submit" class="btn btn-accent">
             🚀 Отправить уведомление
-          </button>
-          <button type="button" class="btn btn-primary" onclick="previewNotification()">
-            👁️ Предварительный просмотр
           </button>
         </div>
       </form>
@@ -153,13 +144,11 @@
 
     .form-actions {
       display: flex;
-      gap: 1rem;
+      justify-content: center;
       margin-top: 2rem;
-      flex-wrap: wrap;
     }
 
     .form-actions .btn {
-      flex: 1;
       min-width: 200px;
     }
 
@@ -326,65 +315,12 @@
         flex-direction: column;
         gap: 0.5rem;
       }
-
-      .form-actions {
-        flex-direction: column;
-      }
-
-      .form-actions .btn {
-        flex: none;
-      }
     }
   </style>
 
   <script>
-    function previewNotification() {
-      const title = document.getElementById('title').value;
-      const message = document.getElementById('message').value;
-      const type = document.getElementById('type').value;
-      
-      if (!title || !message) {
-        alert('⚠️ Пожалуйста, заполните заголовок и сообщение для предварительного просмотра');
-        return;
-      }
-
-      const typeIcons = {
-        'info': 'ℹ️',
-        'warning': '⚠️',
-        'error': '❌',
-        'success': '✅',
-        'urgent': '🚨'
-      };
-
-      const preview = `
-        <div style="background: var(--chip-bg); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; margin: 1rem 0;">
-          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
-            <span style="font-size: 1.5rem;">${typeIcons[type]}</span>
-            <h3 style="margin: 0; color: var(--text-primary);">${title}</h3>
-          </div>
-          <p style="color: var(--text-secondary); margin: 0; line-height: 1.5;">${message}</p>
-        </div>
-      `;
-
-      alert('Предварительный просмотр:\n\n' + title + '\n\n' + message);
-    }
 
     document.addEventListener('DOMContentLoaded', function() {
-      // Показ/скрытие поля выбора пользователя
-      const recipientTypeSelect = document.getElementById('id_recipient_type');
-      const specificUserGroup = document.getElementById('specific-user-group');
-      
-      if (recipientTypeSelect && specificUserGroup) {
-        recipientTypeSelect.addEventListener('change', function() {
-          if (this.value === 'specific') {
-            specificUserGroup.classList.add('show');
-            specificUserGroup.style.display = 'block';
-          } else {
-            specificUserGroup.classList.remove('show');
-            specificUserGroup.style.display = 'none';
-          }
-        });
-      }
 
       // Анимация появления элементов
       const items = document.querySelectorAll('.stat-card, .notification-item');
@@ -401,12 +337,11 @@
       // Валидация формы
       const form = document.querySelector('.notification-form');
       form.addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const title = document.getElementById('title').value.trim();
-        const message = document.getElementById('message').value.trim();
+        const title = document.getElementById('id_title').value.trim();
+        const message = document.getElementById('id_message').value.trim();
         
         if (!title || !message) {
+          e.preventDefault();
           alert('⚠️ Пожалуйста, заполните все обязательные поля!');
           return false;
         }
@@ -416,13 +351,8 @@
         const originalText = submitBtn.innerHTML;
         submitBtn.innerHTML = '<span class="loading"></span> Отправка...';
         submitBtn.disabled = true;
-
-        setTimeout(() => {
-          alert('✅ Уведомление успешно отправлено!');
-          form.reset();
-          submitBtn.innerHTML = originalText;
-          submitBtn.disabled = false;
-        }, 2000);
+        
+        // Форма будет отправлена на сервер
       });
     });
   </script>

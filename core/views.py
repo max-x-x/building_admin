@@ -6,6 +6,7 @@ from django.contrib import messages
 from django.db.models import Count, Q
 from django.utils import timezone
 from datetime import date
+from django.conf import settings
 from .forms import InvitationForm, MemoForm, NotificationForm, ExternalLoginForm
 from .models import Invitation, Memo, SentNotification, MaintenanceTicket, TicketReply, ServiceStatusLog, Admin
 from .services_config import SERVICES_CONFIG
@@ -43,56 +44,144 @@ def get_users_from_api():
     return users
 
 
-def send_notification_to_api(title, message, notification_type, recipient_type, specific_user_id=None):
+def send_notification_to_api(recipient_type, subject, body, access_token):
     """
-    Заглушка функции отправки уведомления по API
-    В реальном проекте здесь будет запрос к внешнему API
+    Отправка уведомления через API
     """
     try:
-        # Имитируем отправку на API
         data = {
-            "title": title,
-            "message": message,
-            "type": notification_type,
-            "recipients": recipient_type,
-            "specific_user_id": specific_user_id,
-            "timestamp": time.time()
+            "to": recipient_type,
+            "subject": subject,
+            "body": body,
+            "is_html": False,
+            "access_token": access_token
         }
         
-        # Заглушка - имитируем задержку API
-        time.sleep(random.uniform(0.5, 2.0))
+        response = requests.post(
+            f'{settings.BUILDING_NOTIFICATIONS_URL}/broadcast/notification',
+            json=data,
+            headers={'Content-Type': 'application/json'},
+            timeout=10
+        )
         
-        # В реальном проекте здесь будет:
-        # response = requests.post(os.getenv("NOTIFICATION_API_URL"), json=data)
-        # response.raise_for_status()
-        
-        print(f"Отправка уведомления на API: {data}")
-        return True
-        
-    except Exception as e:
-        print(f"Ошибка отправки на API: {e}")
-        return False
+        return {
+            'success': response.status_code == 200,
+            'status_code': response.status_code,
+            'response_text': response.text
+        }
+            
+    except requests.RequestException as e:
+        return {
+            'success': False,
+            'status_code': 0,
+            'response_text': str(e)
+        }
 
 @login_required
 def dashboard(request):
     # Статистика для карточек
     today = date.today()
     today_invitations = Invitation.objects.filter(created_at__date=today).count()
-    today_logs = 156  # Заглушка
+    # Получаем количество посещений сегодня
+    today_visits = 0
+    try:
+        response = requests.get(
+            f'{settings.VISITS_API_URL}/sessions/list',
+            headers={'Content-Type': 'application/json'},
+            timeout=15
+        )
+        if response.status_code == 200:
+            data = response.json()
+            sessions = data.get('sessions', [])
+            today = date.today()
+            
+            for session in sessions:
+                visit_date_raw = session.get('visit_date')
+                if visit_date_raw:
+                    try:
+                        from datetime import datetime
+                        dt = datetime.fromisoformat(visit_date_raw.replace('Z', '+00:00'))
+                        # Для отладки выводим даты
+                        today_visits += 1
+                    except Exception as e:
+                        pass
+    except requests.RequestException as e:
+        pass
     today_notifications = SentNotification.objects.filter(sent_at__date=today).count()
-    total_users = 1247  # Заглушка
+    # Получаем количество пользователей из API
+    total_users = 0
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            response = requests.get(
+                f'{settings.BUILDING_API_URL}/users',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if response.status_code == 200:
+                data = response.json()
+                users_list = data.get('items', [])
+                total_users = len(users_list)
+    except requests.RequestException as e:
+        pass
     total_memos = Memo.objects.count()
     open_tickets = MaintenanceTicket.objects.filter(status='open').count()
     
+    # Получаем количество активных объектов из API
+    active_objects = 0
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            response = requests.get(
+                f'{settings.BUILDING_API_URL}/objects',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if response.status_code == 200:
+                data = response.json()
+                objects_list = data.get('items', [])
+                active_objects = len([obj for obj in objects_list if obj.get('status') == 'active'])
+    except requests.RequestException as e:
+        pass
+
+    # Получаем количество элементов в лаборатории
+    laboratory_count = 0
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            response = requests.get(
+                f'{settings.BUILDING_API_URL}/deliveries/list?status=sent_to_lab',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if response.status_code == 200:
+                data = response.json()
+                laboratory_count = len(data.get('items', []))
+    except requests.RequestException as e:
+        pass
+    
     services_status = []
+    working_modules_count = 0
     for service in SERVICES_CONFIG:
         last_log = ServiceStatusLog.objects.filter(service_name=service["name"]).order_by('-checked_at').first()
         if last_log:
+            is_working = last_log.is_working
+            if is_working:
+                working_modules_count += 1
             services_status.append({
                 "name": service["name"],
                 "icon": service["icon"],
-                "is_working": last_log.is_working,
-                "message": "Работает" if last_log.is_working else "Недоступен"
+                "is_working": is_working,
+                "message": "Работает" if is_working else "Недоступен"
             })
         else:
             services_status.append({
@@ -104,12 +193,15 @@ def dashboard(request):
 
     context = {
         "today_invitations": today_invitations,
-        "today_logs": today_logs,
+        "today_visits": today_visits,
         "today_notifications": today_notifications,
         "total_users": total_users,
         "total_memos": total_memos,
         "open_tickets": open_tickets,
+        "active_objects": active_objects,
+        "laboratory_count": laboratory_count,
         "services_status": services_status,
+        "working_modules_count": working_modules_count,
     }
     return render(request, "dashboard.html", context)
 
@@ -125,7 +217,7 @@ def login_view(request):
             password = form.cleaned_data['password']
             try:
                 response = requests.post(
-                    'https://building-api.itc-hub.ru/api/v1/auth/login',
+                    f'{settings.BUILDING_API_URL}/auth/login',
                     json={"email": email, "password": password},
                     headers={"Content-Type": "application/json"},
                     timeout=15
@@ -155,8 +247,6 @@ def logout_view(request):
 
 
 @login_required
-def logs(request):
-    return render(request, "logs.html")
 
 @login_required
 def notifications(request):
@@ -167,17 +257,10 @@ def notifications(request):
             message = form.cleaned_data['message']
             notification_type = form.cleaned_data['notification_type']
             recipient_type = form.cleaned_data['recipient_type']
-            specific_user = form.cleaned_data.get('specific_user', '')
 
-            # Получаем данные о конкретном пользователе
-            specific_user_id = None
-            specific_user_name = None
-            if recipient_type == 'specific' and specific_user:
-                users = get_users_from_api()
-                user_data = next((u for u in users if u['id'] == specific_user), None)
-                if user_data:
-                    specific_user_id = user_data['id']
-                    specific_user_name = user_data['name']
+            # Отправляем на API
+            access_token = request.session.get('access_token', '')
+            result = send_notification_to_api(recipient_type, title, message, access_token)
 
             # Сохраняем в БД
             notification = SentNotification.objects.create(
@@ -185,30 +268,22 @@ def notifications(request):
                 message=message,
                 notification_type=notification_type,
                 recipient_type=recipient_type,
-                specific_user_id=specific_user_id,
-                specific_user_name=specific_user_name,
+                specific_user_id=None,
+                specific_user_name=None,
                 sent_by=request.user,
-                total_recipients=1 if recipient_type == 'specific' else 100,  # Заглушка
-                delivery_time=random.uniform(1.0, 3.0),  # Заглушка
-                read_count=1 if recipient_type == 'specific' else random.randint(80, 95)  # Заглушка
+                total_recipients=1,
+                delivery_time=0.0,
+                read_count=1 if result['success'] else 0
             )
-
-            # Отправляем на API (заглушка)
-            success = send_notification_to_api(title, message, notification_type, recipient_type, specific_user_id)
             
-            if success:
+            if result['success']:
                 messages.success(request, f"Уведомление '{title}' успешно отправлено!")
             else:
-                messages.error(request, "Ошибка при отправке уведомления на API")
+                messages.error(request, f"Ошибка при отправке уведомления: {result['response_text']}")
 
             return redirect('notifications')
     else:
         form = NotificationForm()
-
-    # Получаем список пользователей для формы
-    users = get_users_from_api()
-    user_choices = [(user['id'], f"{user['name']} ({user['role']})") for user in users]
-    form.fields['specific_user'].choices = user_choices
 
     # Получаем статистику из БД
     today = date.today()
@@ -254,7 +329,7 @@ def users(request):
                     params['role'] = role_param
 
             resp = requests.get(
-                'https://building-api.itc-hub.ru/api/v1/users',
+                f'{settings.BUILDING_API_URL}/users',
                 headers={
                     'Authorization': f'Bearer {access_token}',
                     'Content-Type': 'application/json'
@@ -320,104 +395,319 @@ def users(request):
 
 @login_required
 def laboratory(request):
-    return render(request, "laboratory.html")
+    # Получаем данные лаборатории из API
+    laboratory_data = {
+        'violations': 0,
+        'ready': 0,
+        'in_laboratory': 0,
+        'total': 0
+    }
+    materials_list = []
+    
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            # Выводим полный curl запрос в терминал
+            print(f"🌐 CURL запрос к API Laboratory:")
+            print(f"curl -X GET f'{settings.BUILDING_API_URL}/deliveries/list?status=sent_to_lab' \\")
+            print(f"  -H 'Authorization: Bearer {access_token}' \\")
+            print(f"  -H 'Content-Type: application/json'")
+            print(f"")
+            
+            response = requests.get(
+                f'{settings.BUILDING_API_URL}/deliveries/list?status=sent_to_lab',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                deliveries = data.get('items', [])
+                
+                # Подсчитываем статистику по статусам доставок
+                violations = 0
+                ready = 0
+                in_laboratory = len(deliveries)  # Все доставки со статусом sent_to_lab
+                total = len(deliveries)
+                
+                for delivery in deliveries:
+                    status = delivery.get('status', '')
+                    if 'violation' in status.lower() or 'нарушение' in status.lower():
+                        violations += 1
+                    elif 'ready' in status.lower() or 'готов' in status.lower():
+                        ready += 1
+                    
+                    # Формируем список материалов для таблицы
+                    materials_list.append({
+                        'name': delivery.get('material_name', delivery.get('name', 'Неизвестный материал')),
+                        'date': delivery.get('created_at', delivery.get('date', '')),
+                        'object': delivery.get('object_name', f"Объект #{delivery.get('object_id', 'N/A')}"),
+                        'status': delivery.get('status', 'Неизвестно'),
+                        'id': delivery.get('id', ''),
+                    })
+                
+                # Рассчитываем проценты
+                violations_percent = (violations * 100) // total if total > 0 else 0
+                ready_percent = (ready * 100) // total if total > 0 else 0
+                laboratory_percent = (in_laboratory * 100) // total if total > 0 else 0
+                
+                laboratory_data = {
+                    'violations': violations,
+                    'ready': ready,
+                    'in_laboratory': in_laboratory,
+                    'total': total,
+                    'violations_percent': violations_percent,
+                    'ready_percent': ready_percent,
+                    'laboratory_percent': laboratory_percent
+                }
+                
+                print(f"✅ API Laboratory успешно: статус {response.status_code}")
+                print(f"📊 Получены данные лаборатории:")
+                print(f"   - Нарушения: {laboratory_data['violations']}")
+                print(f"   - Готово: {laboratory_data['ready']}")
+                print(f"   - В лаборатории: {laboratory_data['in_laboratory']}")
+                print(f"   - Всего: {laboratory_data['total']}")
+                print(f"📋 Полный ответ API:")
+                print(json.dumps(data, ensure_ascii=False, indent=2))
+            else:
+                print(f"❌ API Laboratory ошибка {response.status_code}: {response.text}")
+        else:
+            print("⚠️ Access token не найден для API Laboratory")
+    except requests.RequestException as e:
+        print(f"❌ Ошибка запроса к API Laboratory: {e}")
+    
+    context = {
+        'laboratory_data': laboratory_data,
+        'materials_list': materials_list,
+    }
+    return render(request, "laboratory.html", context)
 
 @login_required
 def visits(request):
-    # Заглушка данных посещений из API
-    visits_data = [
-        {
-            "id": 1,
-            "fio": "Иванов Иван Иванович",
-            "role": "ССК",
-            "object": "Объект #1 - ул. Пушкина, д. 10",
-            "visit_date": "2024-12-15",
-            "purpose": "Контроль качества работ",
-            "status": "completed",
-            "notes": "Выявлены незначительные нарушения"
-        },
-        {
-            "id": 2,
-            "fio": "Петров Петр Петрович",
-            "role": "ИКО",
-            "object": "Объект #2 - ул. Ленина, д. 25",
-            "visit_date": "2024-12-15",
-            "purpose": "Инспекция объекта",
-            "status": "completed",
-            "notes": "Все работы выполнены согласно нормативам"
-        },
-        {
-            "id": 3,
-            "fio": "Сидоров Сидор Сидорович",
-            "role": "Прораб",
-            "object": "Объект #3 - ул. Гагарина, д. 5",
-            "visit_date": "2024-12-14",
-            "purpose": "Координация работ",
-            "status": "completed",
-            "notes": "Планирование следующего этапа"
-        },
-        {
-            "id": 4,
-            "fio": "Козлов Козел Козлович",
-            "role": "ССК",
-            "object": "Объект #4 - ул. Мира, д. 15",
-            "visit_date": "2024-12-14",
-            "purpose": "Проверка материалов",
-            "status": "completed",
-            "notes": "Проверка качества бетонной смеси"
-        },
-        {
-            "id": 5,
-            "fio": "Смирнов Смир Смирнович",
-            "role": "ИКО",
-            "object": "Объект #5 - ул. Советская, д. 8",
-            "visit_date": "2024-12-13",
-            "purpose": "Технический надзор",
-            "status": "completed",
-            "notes": "Рекомендации по улучшению процесса"
-        },
-        {
-            "id": 6,
-            "fio": "Волков Волк Волкович",
-            "role": "Прораб",
-            "object": "Объект #6 - ул. Центральная, д. 12",
-            "visit_date": "2024-12-13",
-            "purpose": "Управление бригадой",
-            "status": "completed",
-            "notes": "Обучение новых сотрудников"
-        },
-        {
-            "id": 7,
-            "fio": "Новиков Николай Николаевич",
-            "role": "ССК",
-            "object": "Объект #7 - ул. Промышленная, д. 3",
-            "visit_date": "2024-12-12",
-            "purpose": "Контроль безопасности",
-            "status": "completed",
-            "notes": "Проверка соблюдения ТБ"
-        },
-        {
-            "id": 8,
-            "fio": "Морозов Михаил Михайлович",
-            "role": "ИКО",
-            "object": "Объект #8 - ул. Садовая, д. 7",
-            "visit_date": "2024-12-12",
-            "purpose": "Анализ качества",
-            "status": "scheduled",
-            "notes": "Запланированная проверка"
-        }
-    ]
+    visits_data = []
+    total_visits = 0
+    query = (request.GET.get('q') or '').strip()
+    role_filter = request.GET.get('role', 'all')
+    sort = request.GET.get('sort', 'date_desc')
+    date_from_str = (request.GET.get('date_from') or '').strip()
+    date_to_str = (request.GET.get('date_to') or '').strip()
+    
+    # Получаем данные пользователей и объектов
+    users_data = {}
+    objects_data = {}
+    
+    if request.method == "POST":
+        try:
+            access_token = request.session.get('access_token')
+            if not access_token:
+                messages.error(request, "Ошибка авторизации")
+                return redirect('visits')
 
-    # Статистика
-    total_visits = len(visits_data)
-    completed_visits = len([v for v in visits_data if v['status'] == 'completed'])
-    scheduled_visits = len([v for v in visits_data if v['status'] == 'scheduled'])
+            user_id = request.POST.get('user_id')
+            object_id = request.POST.get('object_id')
+            visit_date = request.POST.get('visit_date')
+            user_role = request.POST.get('user_role')
+
+            if not user_id or not object_id or not visit_date:
+                messages.error(request, "Заполните все поля")
+                return redirect('visits')
+
+            payload = {
+                "user_id": user_id,
+                "user_role": user_role or "",
+                "object_id": int(object_id),
+                "visit_date": visit_date
+            }
+
+            resp = requests.post(
+                f"{settings.VISITS_API_URL}/sessions/create",
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                json=payload,
+                timeout=15
+            )
+
+            if 200 <= resp.status_code < 300:
+                messages.success(request, "Посещение добавлено")
+            else:
+                messages.error(request, f"Ошибка создания: {resp.status_code}")
+        except Exception as e:
+            messages.error(request, "Ошибка отправки запроса")
+        return redirect('visits')
+
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            # Получаем пользователей
+            users_response = requests.get(
+                f'{settings.BUILDING_API_URL}/users',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if users_response.status_code == 200:
+                users_list = users_response.json().get('items', [])
+                for user in users_list:
+                    users_data[user.get('id')] = {
+                        'fio': user.get('full_name') or user.get('email') or 'Неизвестно',
+                        'email': user.get('email') or '',
+                        'role': user.get('role', '')
+                    }
+            
+            # Получаем объекты
+            objects_response = requests.get(
+                f'{settings.BUILDING_API_URL}/objects',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if objects_response.status_code == 200:
+                objects_list = objects_response.json().get('items', [])
+                for obj in objects_list:
+                    objects_data[obj.get('id')] = {
+                        'name': obj.get('name') or f'Объект #{obj.get("id")}',
+                        'address': obj.get('address') or 'Адрес не указан'
+                    }
+    except requests.RequestException as e:
+        print(f"❌ Ошибка получения данных пользователей/объектов: {e}")
+    
+    try:
+        response = requests.get(
+            f'{settings.VISITS_API_URL}/sessions/list',
+            headers={'Content-Type': 'application/json'},
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            sessions = data.get('sessions', [])
+            total_visits = data.get('total', 0)
+            
+            # Маппинг ролей для отображения
+            role_display_map = {
+                'ssk': 'ССК',
+                'iko': 'ИКО',
+                'foreman': 'Прораб',
+                'admin': 'Админ',
+            }
+            
+            for session in sessions:
+                user_id = session.get('user_id')
+                object_id = session.get('object_id')
+                
+                # Получаем данные пользователя
+                user_info = users_data.get(user_id, {})
+                user_fio = user_info.get('fio', f'ID: {user_id[:8]}...')
+                user_email = user_info.get('email', '')
+                
+                # Получаем данные объекта
+                object_info = objects_data.get(object_id, {})
+                object_name = object_info.get('name', f'Объект #{object_id}')
+                object_address = object_info.get('address', 'Адрес не указан')
+                
+                # Обрабатываем дату
+                visit_date_raw = session.get('visit_date')
+                visit_date_formatted = visit_date_raw
+                if visit_date_raw:
+                    try:
+                        from datetime import datetime
+                        # Парсим ISO дату
+                        dt = datetime.fromisoformat(visit_date_raw.replace('Z', '+00:00'))
+                        visit_date_formatted = dt.strftime('%d.%m.%Y %H:%M')
+                    except:
+                        visit_date_formatted = visit_date_raw
+                
+                visits_data.append({
+                    "id": session.get('id'),
+                    "user_id": user_id,
+                    "user_fio": user_fio,
+                    "user_email": user_email,
+                    "role": role_display_map.get(session.get('user_role'), session.get('user_role', '')),
+                    "object_id": object_id,
+                    "object_name": object_name,
+                    "object_address": object_address,
+                    "visit_date": visit_date_formatted,
+                    "status": "completed"
+                })
+
+            from datetime import datetime
+            parsed_visits = []
+            for v in visits_data:
+                dt = None
+                try:
+                    dt = datetime.strptime(v["visit_date"], "%d.%m.%Y %H:%M") if v["visit_date"] else None
+                except Exception:
+                    dt = None
+                parsed_visits.append({**v, "_dt": dt})
+
+            if query:
+                ql = query.lower()
+                parsed_visits = [v for v in parsed_visits if (v["user_fio"] or '').lower().find(ql) != -1 or (v["object_name"] or '').lower().find(ql) != -1 or (v["user_email"] or '').lower().find(ql) != -1]
+
+            if role_filter and role_filter != 'all':
+                parsed_visits = [v for v in parsed_visits if (v["role"] or '') == role_filter]
+
+            def parse_date(s):
+                try:
+                    return datetime.strptime(s, "%Y-%m-%d")
+                except Exception:
+                    return None
+
+            date_from = parse_date(date_from_str)
+            date_to = parse_date(date_to_str)
+            if date_from or date_to:
+                filtered = []
+                for v in parsed_visits:
+                    ok = True
+                    if date_from and v["_dt"] and v["_dt"] < date_from:
+                        ok = False
+                    if date_to and v["_dt"] and v["_dt"] > (date_to.replace(hour=23, minute=59, second=59)):
+                        ok = False
+                    if ok:
+                        filtered.append(v)
+                parsed_visits = filtered
+
+            if sort == 'date_asc':
+                parsed_visits.sort(key=lambda v: (v["_dt"] is None, v["_dt"]))
+            elif sort == 'date_desc':
+                parsed_visits.sort(key=lambda v: (v["_dt"] is None, v["_dt"]), reverse=True)
+            elif sort == 'name_asc':
+                parsed_visits.sort(key=lambda v: (v["user_fio"] or '').lower())
+            elif sort == 'name_desc':
+                parsed_visits.sort(key=lambda v: (v["user_fio"] or '').lower(), reverse=True)
+
+            visits_data = [{k: v[k] for k in v if k != '_dt'} for v in parsed_visits]
+
+        else:
+            visits_data = []
+    except requests.RequestException:
+        visits_data = []
 
     context = {
         "visits": visits_data,
         "total_visits": total_visits,
-        "completed_visits": completed_visits,
-        "scheduled_visits": scheduled_visits,
+        "q": query,
+        "role": role_filter,
+        "sort": sort,
+        "date_from": date_from_str,
+        "date_to": date_to_str,
+        "users_options": [
+            {"id": uid, "label": f"{info['fio']} ({info['email']})", "role": info.get('role', '')}
+            for uid, info in users_data.items()
+        ],
+        "objects_options": [
+            {"id": oid, "label": f"{info['name']} — {info['address']}"}
+            for oid, info in objects_data.items()
+        ]
     }
     return render(request, "visits.html", context)
 
@@ -502,6 +792,20 @@ def api_create_ticket(request):
             from_user=data.get('from_user', 'Система'),
             source='api'
         )
+        
+        # Отправляем уведомление админам о новом тикете
+        try:
+            access_token = data.get('access_token', '')
+            if access_token:
+                notification_result = send_notification_to_api(
+                    recipient_type='admin',
+                    subject=f'Новый тикет #{ticket_id}',
+                    body=f'Создан новый тикет: {ticket.title}\nОт: {ticket.from_user}',
+                    access_token=access_token
+                )
+                print(f"✅ Уведомление о новом тикете отправлено: {notification_result}")
+        except Exception as e:
+            print(f"❌ Ошибка отправки уведомления о новом тикете: {e}")
         
         return JsonResponse({
             'success': True,
@@ -644,16 +948,29 @@ def api_reply_ticket(request):
             message=message
         )
         
-        # Автоматически закрываем тикет после ответа оператора
+        # Отправляем уведомление пользователю о закрытии тикета ПЕРЕД закрытием
+        try:
+            access_token = data.get('access_token', '')
+            if access_token:
+                notification_result = send_notification_to_api(
+                    recipient_type='all',  # Отправляем всем, так как не знаем конкретного пользователя
+                    subject=f'Тикет #{ticket.ticket_id} закрыт',
+                    body=f'Ваш тикет "{ticket.title}" был закрыт.\nОтвет: {message}',
+                    access_token=access_token
+                )
+                print(f"📤 Отправка уведомления о закрытии тикета #{ticket.ticket_id}:")
+                print(f"   Статус: {notification_result['success']}")
+                print(f"   Код ответа: {notification_result['status_code']}")
+                print(f"   Ответ API: {notification_result['response_text']}")
+            else:
+                print(f"⚠️ Access token не предоставлен для тикета #{ticket.ticket_id}")
+        except Exception as e:
+            print(f"❌ Ошибка отправки уведомления о закрытии тикета #{ticket.ticket_id}: {e}")
+        
+        # Закрываем тикет ПОСЛЕ отправки уведомления
         ticket.status = 'closed'
         ticket.save()
-        
-        # Отправляем уведомление на API о закрытии тикета
-        try:
-            # Здесь можно добавить отправку на внешний API
-            print(f"Тикет {ticket.ticket_id} закрыт после ответа оператора")
-        except Exception as e:
-            print(f"Ошибка отправки уведомления о закрытии тикета: {e}")
+        print(f"✅ Тикет #{ticket.ticket_id} закрыт после отправки уведомления")
         
         return JsonResponse({
             'success': True,
@@ -761,7 +1078,7 @@ def invitations(request):
             }
             try:
                 response = requests.post(
-                    "http://localhost:8001/role/notification",
+                    f"{settings.BUILDING_NOTIFICATIONS_URL}/role/notification",
                     json=payload,
                     headers={"Content-Type": "application/json"},
                     timeout=10
@@ -796,13 +1113,148 @@ def invitations(request):
     return render(request, "invitations.html", context)\
 
 @login_required
+def deliveries(request):
+    deliveries_list = []
+    total_deliveries = 0
+    objects_list = []
+    status_counts = {
+        'scheduled': 0,
+        'awaiting_lab': 0,
+        'in_transit': 0,
+        'delivered': 0,
+        'cancelled': 0
+    }
+    
+    # Параметры фильтрации и пагинации
+    object_filter = request.GET.get('object_id', '')
+    limit = int(request.GET.get('limit', 20))
+    offset = int(request.GET.get('offset', 0))
+    current_page = (offset // limit) + 1
+    
+    if request.method == "POST":
+        try:
+            access_token = request.session.get('access_token')
+            if not access_token:
+                return JsonResponse({'success': False, 'error': 'Ошибка авторизации'}, status=401)
+            
+            object_id = request.POST.get('object_id')
+            planned_date = request.POST.get('planned_date')
+            notes = request.POST.get('notes', '')
+            
+            if not object_id or not planned_date:
+                return JsonResponse({'success': False, 'error': 'Заполните все обязательные поля'}, status=400)
+            
+            data = {
+                "object_id": int(object_id),
+                "planned_date": planned_date,
+                "notes": notes
+            }
+            
+            response = requests.post(
+                f'{settings.BUILDING_API_URL}/deliveries',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                json=data,
+                timeout=15
+            )
+            
+            if response.status_code == 200 or response.status_code == 201:
+                return JsonResponse({'success': True, 'message': 'Поставка успешно создана'})
+            else:
+                return JsonResponse({'success': False, 'error': f'Ошибка API: {response.status_code}'}, status=400)
+                
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)}, status=500)
+    
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            # Получаем поставки с фильтрацией и пагинацией
+            deliveries_params = {
+                'limit': limit,
+                'offset': offset
+            }
+            if object_filter:
+                deliveries_params['object_id'] = object_filter
+                
+            deliveries_response = requests.get(
+                f'{settings.BUILDING_API_URL}/deliveries/list',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                params=deliveries_params,
+                timeout=15
+            )
+            
+            if deliveries_response.status_code == 200:
+                data = deliveries_response.json()
+                deliveries_list = data.get('items', [])
+                total_deliveries = data.get('total', 0)
+                
+                for delivery in deliveries_list:
+                    status = delivery.get('status', 'unknown')
+                    if status in status_counts:
+                        status_counts[status] += 1
+                
+                print(f"✅ API Deliveries успешно: получено {len(deliveries_list)} поставок")
+            else:
+                print(f"❌ API Deliveries ошибка {deliveries_response.status_code}: {deliveries_response.text}")
+            
+            # Получаем объекты для формы
+            objects_response = requests.get(
+                f'{settings.BUILDING_API_URL}/objects',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            
+            if objects_response.status_code == 200:
+                objects_data = objects_response.json()
+                objects_list = objects_data.get('items', [])
+                print(f"✅ API Objects успешно: получено {len(objects_list)} объектов")
+            else:
+                print(f"❌ API Objects ошибка {objects_response.status_code}: {objects_response.text}")
+        else:
+            print("❌ Токен не найден в сессии для API")
+    except requests.RequestException as e:
+        print(f"❌ Ошибка запроса к API: {e}")
+
+    # Вычисляем пагинацию
+    total_pages = (total_deliveries + limit - 1) // limit if total_deliveries > 0 else 1
+    has_prev = current_page > 1
+    has_next = current_page < total_pages
+    last_offset = (total_pages - 1) * limit
+    
+    context = {
+        "deliveries": deliveries_list,
+        "total_deliveries": total_deliveries,
+        "status_counts": status_counts,
+        "objects": objects_list,
+        "object_filter": object_filter,
+        "current_page": current_page,
+        "total_pages": total_pages,
+        "has_prev": has_prev,
+        "has_next": has_next,
+        "prev_offset": max(0, offset - limit),
+        "next_offset": offset + limit,
+        "last_offset": last_offset,
+        "limit": limit,
+    }
+    return render(request, "deliveries.html", context)
+
+@login_required
 def objects_page(request):
     objects_list = []
     try:
         access_token = request.session.get('access_token')
         if access_token:
             response = requests.get(
-                'https://building-api.itc-hub.ru/api/v1/objects',
+                f'{settings.BUILDING_API_URL}/objects',
                 headers={
                     'Authorization': f'Bearer {access_token}',
                     'Content-Type': 'application/json'
@@ -812,12 +1264,26 @@ def objects_page(request):
             if response.status_code == 200:
                 data = response.json()
                 objects_list = data.get('items', [])
-            else:
-                print(f"❌ API Objects ошибка {response.status_code}: {response.text}")
+                
+                # Подсчитываем объекты по статусам
+                status_counts = {
+                    'active': 0,
+                    'activation_pending': 0,
+                    'suspended': 0,
+                    'completed': 0,
+                    'draft': 0,
+                }
+                
+                for obj in objects_list:
+                    status = obj.get('status', 'unknown')
+                    if status in status_counts:
+                        status_counts[status] += 1
+                
+            pass
         else:
-            print("❌ Токен не найден в сессии")
+            pass
     except requests.RequestException as e:
-        print(f"❌ Ошибка запроса к API Objects: {str(e)}")
+        pass
 
     if request.method == "POST":
         name = request.POST.get("name")
@@ -838,8 +1304,12 @@ def objects_page(request):
                 "address": address
             }
             
+            url = f'{settings.BUILDING_API_URL}/objects'
+            print(f"🌐 Создание объекта: POST {url}")
+            print(f"📤 Данные: {data}")
+            
             response = requests.post(
-                'https://building-api.itc-hub.ru/api/v1/objects',
+                url,
                 headers={
                     'Authorization': f'Bearer {access_token}',
                     'Content-Type': 'application/json'
@@ -847,6 +1317,9 @@ def objects_page(request):
                 json=data,
                 timeout=15
             )
+            
+            print(f"📡 Ответ API: {response.status_code}")
+            print(f"📄 Тело ответа: {response.text}")
             
             if response.status_code == 200:
                 messages.success(request, "Объект успешно создан!")
@@ -859,111 +1332,13 @@ def objects_page(request):
         return redirect("objects")
 
     return render(request, "objects.html", {
-        "objects": objects_list
+        "objects": objects_list,
+        "status_counts": status_counts if 'status_counts' in locals() else {
+            'active': 0,
+            'activation_pending': 0,
+            'suspended': 0,
+            'completed': 0
+        }
     })
 
 
-@login_required
-def object_detail(request, object_id):
-    # Заглушка данных из API - меняем статус для демонстрации
-    is_activated = object_id % 2 == 0  # четные ID = активированы
-    
-    api_data = {
-        "id": object_id,
-        "address": "ул. Пушкина, д. 10",
-        "status": "activated" if is_activated else "requires_activation",
-        "responsible_foreman": "Прораб Петров",
-        "responsible_iko": "ИКО Сидоров" if is_activated else None,
-        "work_list": [
-            {
-                "name": "Земляные работы",
-                "description": "Рытье котлована под фундамент",
-                "start_date": "2024-01-15",
-                "end_date": "2024-01-25",
-                "completed": True
-            },
-            {
-                "name": "Бетонные работы", 
-                "description": "Заливка фундамента",
-                "start_date": "2024-01-26",
-                "end_date": "2024-02-05",
-                "completed": False
-            },
-            {
-                "name": "Кровельные работы",
-                "description": "Устройство кровли",
-                "start_date": "2024-02-06",
-                "end_date": "2024-02-20",
-                "completed": False
-            }
-        ] if is_activated else [],  # Пустой список если не активирован
-        "schedule": "https://example.com/schedule.pdf" if is_activated else None,
-        "visits": [
-            {
-                "fio": "Иванов Иван Иванович",
-                "date": "2024-01-10"
-            },
-            {
-                "fio": "Петров Петр Петрович", 
-                "date": "2024-01-12"
-            }
-        ],
-        "deliveries": [
-            {
-                "date": "2024-01-08",
-                "supplier": "ООО Стройматериалы",
-                "materials": "Бетон, арматура",
-                "invoice_link": "https://example.com/invoice1.pdf"
-            },
-            {
-                "date": "2024-01-15",
-                "supplier": "ИП Кровельные работы",
-                "materials": "Кровельные материалы",
-                "invoice_link": "https://example.com/invoice2.pdf"
-            }
-        ],
-        "violations": {
-            "total": 5,
-            "fixed": 3,
-            "link": "https://example.com/violations.pdf"
-        } if is_activated else None,
-        "documents_count": 12 if is_activated else 3,
-        "documentation_link": "https://example.com/object-docs.pdf" if is_activated else None,
-        "planned_deliveries": [
-            {
-                "date": "2024-02-01",
-                "supplier": "ООО МеталлСтрой",
-                "materials": "Металлические конструкции",
-                "status": "planned"
-            },
-            {
-                "date": "2024-02-10", 
-                "supplier": "ИП ЭлектроМонтаж",
-                "materials": "Электрокабели, розетки",
-                "status": "confirmed"
-            }
-        ] if is_activated else [],
-        "polygon_data": {
-            "coordinates": "55.7558° N, 37.6176° E",
-            "area": "2,500 м²",
-            "points": [
-                {"lat": 55.7558, "lng": 37.6176},
-                {"lat": 55.7568, "lng": 37.6186},
-                {"lat": 55.7578, "lng": 37.6196},
-                {"lat": 55.7568, "lng": 37.6206}
-            ]
-        } if is_activated else None  # Для неактивированных объектов полигон может быть или не быть
-    }
-
-    # Рассчитываем прогресс работ
-    work_progress = 0
-    if api_data["work_list"]:
-        completed_works = sum(1 for work in api_data["work_list"] if work.get("completed", False))
-        total_works = len(api_data["work_list"])
-        work_progress = int((completed_works / total_works) * 100)
-
-    context = {
-        "object": api_data,
-        "work_progress": work_progress,
-    }
-    return render(request, "object_detail.html", context)

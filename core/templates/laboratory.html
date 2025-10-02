@@ -22,45 +22,41 @@
       <div class="materials-stats">
         <div class="stat-card violations-card">
           <div class="stat-icon">⚠️</div>
-          <div class="stat-number">12</div>
+          <div class="stat-number">{{ laboratory_data.violations }}</div>
           <div class="stat-label">Выявлены нарушения</div>
           <div class="stat-progress">
             <div class="progress-bar">
-              <div class="progress-fill violations" style="width: 48%"></div>
+              <div class="progress-fill violations" style="width: {{ laboratory_data.violations_percent }}%"></div>
             </div>
-            <span class="progress-text">48%</span>
+            <span class="progress-text">{{ laboratory_data.violations_percent }}%</span>
           </div>
         </div>
         <div class="stat-card ready-card">
           <div class="stat-icon">✅</div>
-          <div class="stat-number">8</div>
+          <div class="stat-number">{{ laboratory_data.ready }}</div>
           <div class="stat-label">Готово</div>
           <div class="stat-progress">
             <div class="progress-bar">
-              <div class="progress-fill ready" style="width: 32%"></div>
+              <div class="progress-fill ready" style="width: {{ laboratory_data.ready_percent }}%"></div>
             </div>
-            <span class="progress-text">32%</span>
+            <span class="progress-text">{{ laboratory_data.ready_percent }}%</span>
           </div>
         </div>
         <div class="stat-card laboratory-card">
           <div class="stat-icon">🔬</div>
-          <div class="stat-number">5</div>
+          <div class="stat-number">{{ laboratory_data.in_laboratory }}</div>
           <div class="stat-label">В лаборатории</div>
           <div class="stat-progress">
             <div class="progress-bar">
-              <div class="progress-fill laboratory" style="width: 20%"></div>
+              <div class="progress-fill laboratory" style="width: {{ laboratory_data.laboratory_percent }}%"></div>
             </div>
-            <span class="progress-text">20%</span>
+            <span class="progress-text">{{ laboratory_data.laboratory_percent }}%</span>
           </div>
         </div>
         <div class="stat-card total-card">
           <div class="stat-icon">📦</div>
-          <div class="stat-number">25</div>
+          <div class="stat-number">{{ laboratory_data.total }}</div>
           <div class="stat-label">Всего материалов</div>
-          <div class="stat-trend">
-            <span class="trend-icon">📈</span>
-            <span class="trend-text">+3 за неделю</span>
-          </div>
         </div>
       </div>
     </div>
@@ -78,42 +74,32 @@
             </tr>
           </thead>
           <tbody>
+            {% for material in materials_list %}
             <tr>
-              <td>Бетонная смесь М300</td>
-              <td>15.12.2024</td>
-              <td>Объект #1 - ул. Пушкина, д. 10</td>
-              <td><span class="status-badge violations">Выявлены нарушения</span></td>
+              <td>{{ material.name }}</td>
+              <td>{{ material.date|date:"d.m.Y" }}</td>
+              <td>{{ material.object }}</td>
+              <td>
+                {% if 'violation' in material.status|lower or 'нарушение' in material.status|lower %}
+                  <span class="status-badge violations">Выявлены нарушения</span>
+                {% elif 'ready' in material.status|lower or 'готов' in material.status|lower %}
+                  <span class="status-badge ready">Готово</span>
+                {% else %}
+                  <span class="status-badge laboratory">В лаборатории</span>
+                {% endif %}
+              </td>
             </tr>
+            {% empty %}
             <tr>
-              <td>Арматура А500С</td>
-              <td>14.12.2024</td>
-              <td>Объект #2 - ул. Ленина, д. 25</td>
-              <td><span class="status-badge ready">Готово</span></td>
+              <td colspan="4" class="empty-materials">
+                <div class="empty-state">
+                  <div class="empty-icon">🧪</div>
+                  <div class="empty-title">Материалы не найдены</div>
+                  <div class="empty-description">Нет материалов в лаборатории</div>
+                </div>
+              </td>
             </tr>
-            <tr>
-              <td>Цемент ПЦ400</td>
-              <td>13.12.2024</td>
-              <td>Объект #3 - ул. Гагарина, д. 5</td>
-              <td><span class="status-badge laboratory">В лаборатории</span></td>
-            </tr>
-            <tr>
-              <td>Песок речной</td>
-              <td>12.12.2024</td>
-              <td>Объект #1 - ул. Пушкина, д. 10</td>
-              <td><span class="status-badge violations">Выявлены нарушения</span></td>
-            </tr>
-            <tr>
-              <td>Щебень гранитный</td>
-              <td>11.12.2024</td>
-              <td>Объект #4 - ул. Мира, д. 15</td>
-              <td><span class="status-badge ready">Готово</span></td>
-            </tr>
-            <tr>
-              <td>Гидроизоляция</td>
-              <td>10.12.2024</td>
-              <td>Объект #2 - ул. Ленина, д. 25</td>
-              <td><span class="status-badge laboratory">В лаборатории</span></td>
-            </tr>
+            {% endfor %}
           </tbody>
         </table>
       </div>

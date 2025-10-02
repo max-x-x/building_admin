@@ -24,97 +24,176 @@
 
 
       <div class="tabs">
-        <button class="tab-button active" onclick="switchTab('activated')">
-          ✅ Активированные (45)
+        <button class="tab-button active" onclick="switchTab('active')">
+          ✅ Активные ({{ status_counts.active }})
         </button>
-        <button class="tab-button" onclick="switchTab('pending')">
-          ⏳ Требующие активации (44)
+        <button class="tab-button" onclick="switchTab('activation_pending')">
+          ⏳ Требующие активации ({{ status_counts.activation_pending }})
+        </button>
+        <button class="tab-button" onclick="switchTab('suspended')">
+          ⏸️ Приостановленные ({{ status_counts.suspended }})
+        </button>
+        <button class="tab-button" onclick="switchTab('completed')">
+          ✅ Завершенные ({{ status_counts.completed }})
+        </button>
+        <button class="tab-button" onclick="switchTab('draft')">
+          🆕 Новые объекты ({{ status_counts.draft }})
         </button>
       </div>
 
-      <div id="activated-tab" class="tab-content active">
+      <div id="active-tab" class="tab-content active">
         <div class="objects-grid">
           {% for obj in objects %}
-          {% if obj.id and obj.id|divisibleby:2 %}
-          <div class="object-card" onclick="openObjectDetail({{ obj.id }})">
+          {% if obj.status == 'active' %}
+          <div class="object-card">
             <div class="card-header">
               <div class="object-id">#{{ obj.id }}</div>
-              <div class="object-status chip chip-success">Активирован</div>
+              <div class="object-status chip chip-success">Активен</div>
             </div>
           
           <div class="card-content">
+            <div class="object-name">
+              <div class="name-icon">🏗️</div>
+              <div class="name-text">
+                <strong>{{ obj.name }}</strong>
+              </div>
+            </div>
+            
             <div class="object-address">
               <div class="address-icon">📍</div>
               <div class="address-text">
-                <strong>{{ obj.address }}</strong>
+                {{ obj.address }}
               </div>
             </div>
             
-            <div class="object-responsible">
-              <div class="responsible-icon">👤</div>
-              <div class="responsible-text">
-                <span class="chip chip-success">{{ obj.responsible }}</span>
+            {% if obj.ssk %}
+            <div class="object-team">
+              <div class="team-icon">🛡️</div>
+              <div class="team-text">
+                <span class="team-label">ССК:</span> {{ obj.ssk.full_name }}
               </div>
             </div>
+            {% endif %}
             
-            <div class="object-description">
-              <div class="description-icon">📝</div>
-              <div class="description-text">
-                Строительный объект в фазе подготовки
+            {% if obj.foreman %}
+            <div class="object-team">
+              <div class="team-icon">👷</div>
+              <div class="team-text">
+                <span class="team-label">Прораб:</span> {{ obj.foreman.full_name }}
               </div>
             </div>
+            {% endif %}
+            
+            {% if obj.work_progress is not None %}
+            <div class="object-progress">
+              <div class="progress-icon">📊</div>
+              <div class="progress-text">
+                <span class="progress-label">Прогресс:</span> {{ obj.work_progress }}%
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.deliveries_count %}
+            <div class="object-stats">
+              <div class="stat-item">
+                <span class="stat-icon">🚚</span>
+                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
+              </div>
+              {% if obj.prescriptions_count %}
+              <div class="stat-item">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
           </div>
           
           <div class="card-footer">
-            <div class="click-hint">👆 Нажмите для детального просмотра</div>
+            <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
           </div>
         </div>
           {% endif %}
           {% empty %}
           <div class="empty-state">
             <div class="empty-icon">🌌</div>
-            <div class="empty-title">Активированные объекты не найдены</div>
-            <div class="empty-description">Нет активированных объектов</div>
+            <div class="empty-title">Активные объекты не найдены</div>
+            <div class="empty-description">Нет активных объектов</div>
           </div>
           {% endfor %}
         </div>
       </div>
 
-      <div id="pending-tab" class="tab-content">
+      <div id="activation_pending-tab" class="tab-content">
         <div class="objects-grid">
           {% for obj in objects %}
-          {% if obj.id and not obj.id|divisibleby:2 %}
-          <div class="object-card" onclick="openObjectDetail({{ obj.id }})">
+          {% if obj.status == 'activation_pending' %}
+          <div class="object-card">
             <div class="card-header">
               <div class="object-id">#{{ obj.id }}</div>
               <div class="object-status chip chip-warning">Требует активации</div>
             </div>
           
           <div class="card-content">
+            <div class="object-name">
+              <div class="name-icon">🏗️</div>
+              <div class="name-text">
+                <strong>{{ obj.name }}</strong>
+              </div>
+            </div>
+            
             <div class="object-address">
               <div class="address-icon">📍</div>
               <div class="address-text">
-                <strong>{{ obj.address }}</strong>
+                {{ obj.address }}
               </div>
             </div>
             
-            <div class="object-responsible">
-              <div class="responsible-icon">👤</div>
-              <div class="responsible-text">
-                <span class="chip chip-success">{{ obj.responsible }}</span>
+            {% if obj.ssk %}
+            <div class="object-team">
+              <div class="team-icon">🛡️</div>
+              <div class="team-text">
+                <span class="team-label">ССК:</span> {{ obj.ssk.full_name }}
               </div>
             </div>
+            {% endif %}
             
-            <div class="object-description">
-              <div class="description-icon">📝</div>
-              <div class="description-text">
-                Строительный объект в фазе подготовки
+            {% if obj.foreman %}
+            <div class="object-team">
+              <div class="team-icon">👷</div>
+              <div class="team-text">
+                <span class="team-label">Прораб:</span> {{ obj.foreman.full_name }}
               </div>
             </div>
+            {% endif %}
+            
+            {% if obj.work_progress is not None %}
+            <div class="object-progress">
+              <div class="progress-icon">📊</div>
+              <div class="progress-text">
+                <span class="progress-label">Прогресс:</span> {{ obj.work_progress }}%
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.deliveries_count %}
+            <div class="object-stats">
+              <div class="stat-item">
+                <span class="stat-icon">🚚</span>
+                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
+              </div>
+              {% if obj.prescriptions_count %}
+              <div class="stat-item">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
           </div>
           
           <div class="card-footer">
-            <div class="click-hint">👆 Нажмите для детального просмотра</div>
+            <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
           </div>
         </div>
           {% endif %}
@@ -122,10 +201,255 @@
           <div class="empty-state">
             <div class="empty-icon">🌌</div>
             <div class="empty-title">Объекты не найдены</div>
-            <div class="empty-description">Добавьте первый объект, чтобы начать работу</div>
-            <button class="btn btn-accent" id="show-form-btn-empty">
-              ✨ Добавить объект
-            </button>
+            <div class="empty-description">Нет объектов, требующих активации</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="suspended-tab" class="tab-content">
+        <div class="objects-grid">
+          {% for obj in objects %}
+          {% if obj.status == 'suspended' %}
+          <div class="object-card">
+            <div class="card-header">
+              <div class="object-id">#{{ obj.id }}</div>
+              <div class="object-status chip chip-error">Приостановлен</div>
+            </div>
+          
+          <div class="card-content">
+            <div class="object-name">
+              <div class="name-icon">🏗️</div>
+              <div class="name-text">
+                <strong>{{ obj.name }}</strong>
+              </div>
+            </div>
+            
+            <div class="object-address">
+              <div class="address-icon">📍</div>
+              <div class="address-text">
+                {{ obj.address }}
+              </div>
+            </div>
+            
+            {% if obj.ssk %}
+            <div class="object-team">
+              <div class="team-icon">🛡️</div>
+              <div class="team-text">
+                <span class="team-label">ССК:</span> {{ obj.ssk.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.foreman %}
+            <div class="object-team">
+              <div class="team-icon">👷</div>
+              <div class="team-text">
+                <span class="team-label">Прораб:</span> {{ obj.foreman.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.work_progress is not None %}
+            <div class="object-progress">
+              <div class="progress-icon">📊</div>
+              <div class="progress-text">
+                <span class="progress-label">Прогресс:</span> {{ obj.work_progress }}%
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.deliveries_count %}
+            <div class="object-stats">
+              <div class="stat-item">
+                <span class="stat-icon">🚚</span>
+                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
+              </div>
+              {% if obj.prescriptions_count %}
+              <div class="stat-item">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          
+          <div class="card-footer">
+            <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
+          </div>
+        </div>
+          {% endif %}
+          {% empty %}
+          <div class="empty-state">
+            <div class="empty-icon">🌌</div>
+            <div class="empty-title">Объекты не найдены</div>
+            <div class="empty-description">Нет приостановленных объектов</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="completed-tab" class="tab-content">
+        <div class="objects-grid">
+          {% for obj in objects %}
+          {% if obj.status == 'completed' %}
+          <div class="object-card">
+            <div class="card-header">
+              <div class="object-id">#{{ obj.id }}</div>
+              <div class="object-status chip chip-success">Завершен</div>
+            </div>
+          
+          <div class="card-content">
+            <div class="object-name">
+              <div class="name-icon">🏗️</div>
+              <div class="name-text">
+                <strong>{{ obj.name }}</strong>
+              </div>
+            </div>
+            
+            <div class="object-address">
+              <div class="address-icon">📍</div>
+              <div class="address-text">
+                {{ obj.address }}
+              </div>
+            </div>
+            
+            {% if obj.ssk %}
+            <div class="object-team">
+              <div class="team-icon">🛡️</div>
+              <div class="team-text">
+                <span class="team-label">ССК:</span> {{ obj.ssk.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.foreman %}
+            <div class="object-team">
+              <div class="team-icon">👷</div>
+              <div class="team-text">
+                <span class="team-label">Прораб:</span> {{ obj.foreman.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.work_progress is not None %}
+            <div class="object-progress">
+              <div class="progress-icon">📊</div>
+              <div class="progress-text">
+                <span class="progress-label">Прогресс:</span> {{ obj.work_progress }}%
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.deliveries_count %}
+            <div class="object-stats">
+              <div class="stat-item">
+                <span class="stat-icon">🚚</span>
+                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
+              </div>
+              {% if obj.prescriptions_count %}
+              <div class="stat-item">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          
+          <div class="card-footer">
+            <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
+          </div>
+        </div>
+          {% endif %}
+          {% empty %}
+          <div class="empty-state">
+            <div class="empty-icon">🌌</div>
+            <div class="empty-title">Объекты не найдены</div>
+            <div class="empty-description">Нет завершенных объектов</div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div id="draft-tab" class="tab-content">
+        <div class="objects-grid">
+          {% for obj in objects %}
+          {% if obj.status == 'draft' %}
+          <div class="object-card">
+            <div class="card-header">
+              <div class="object-id">#{{ obj.id }}</div>
+              <div class="object-status chip">Новый</div>
+            </div>
+          
+          <div class="card-content">
+            <div class="object-name">
+              <div class="name-icon">🏗️</div>
+              <div class="name-text">
+                <strong>{{ obj.name }}</strong>
+              </div>
+            </div>
+            
+            <div class="object-address">
+              <div class="address-icon">📍</div>
+              <div class="address-text">
+                {{ obj.address }}
+              </div>
+            </div>
+            
+            {% if obj.ssk %}
+            <div class="object-team">
+              <div class="team-icon">🛡️</div>
+              <div class="team-text">
+                <span class="team-label">ССК:</span> {{ obj.ssk.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.foreman %}
+            <div class="object-team">
+              <div class="team-icon">👷</div>
+              <div class="team-text">
+                <span class="team-label">Прораб:</span> {{ obj.foreman.full_name }}
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.work_progress is not None %}
+            <div class="object-progress">
+              <div class="progress-icon">📊</div>
+              <div class="progress-text">
+                <span class="progress-label">Прогресс:</span> {{ obj.work_progress }}%
+              </div>
+            </div>
+            {% endif %}
+            
+            {% if obj.deliveries_count %}
+            <div class="object-stats">
+              <div class="stat-item">
+                <span class="stat-icon">🚚</span>
+                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
+              </div>
+              {% if obj.prescriptions_count %}
+              <div class="stat-item">
+                <span class="stat-icon">⚠️</span>
+                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
+              </div>
+              {% endif %}
+            </div>
+            {% endif %}
+          </div>
+          <div class="card-footer">
+            <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
+          </div>
+        </div>
+          {% endif %}
+          {% empty %}
+          <div class="empty-state">
+            <div class="empty-icon">🌌</div>
+            <div class="empty-title">Новых объектов нет</div>
+            <div class="empty-description">Нет объектов в статусе draft</div>
           </div>
           {% endfor %}
         </div>
@@ -259,15 +583,92 @@
       border-top: 1px solid var(--border-color);
     }
 
-    .click-hint {
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      font-style: italic;
+
+    .object-name {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1rem;
     }
 
-    .object-card {
-      cursor: pointer;
+    .name-icon {
+      font-size: 1.2rem;
+    }
+
+    .name-text {
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .object-team {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 0.75rem;
+    }
+
+    .team-icon {
+      font-size: 1rem;
+    }
+
+    .team-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .team-label {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .object-progress {
+      margin-bottom: 1rem;
+    }
+
+    .progress-icon {
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-text {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-bottom: 0.5rem;
+    }
+
+    .progress-label {
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+
+    .object-stats {
+      display: flex;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .stat-icon {
+      font-size: 0.9rem;
+    }
+
+    .object-uuid {
+      font-family: 'Courier New', monospace;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: var(--chip-bg);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid var(--border-color);
     }
 
     .tabs {
@@ -379,9 +780,6 @@
       showFormBtn.classList.add('btn-accent');
     }
 
-    function openObjectDetail(objectId) {
-      window.location.href = `/objects/${objectId}/`;
-    }
 
     function switchTab(tabName) {
       // Скрыть все вкладки

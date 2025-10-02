@@ -39,17 +39,15 @@ class NotificationForm(forms.Form):
     
     RECIPIENT_TYPE_CHOICES = [
         ('all', 'Все пользователи'),
-        ('admins', 'Администраторы'),
-        ('managers', 'Менеджеры'),
-        ('workers', 'Работники'),
-        ('specific', 'Конкретный пользователь'),
+        ('ssk', 'ССК'),
+        ('iko', 'ИКО'),
+        ('foreman', 'Прораб'),
     ]
     
-    title = forms.CharField(max_length=200, label='Заголовок уведомления')
-    message = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Сообщение')
-    notification_type = forms.ChoiceField(choices=TYPE_CHOICES, label='Тип уведомления')
-    recipient_type = forms.ChoiceField(choices=RECIPIENT_TYPE_CHOICES, label='Получатели')
-    specific_user = forms.ChoiceField(choices=[], label='Выберите пользователя', required=False)
+    title = forms.CharField(max_length=200, label='Заголовок уведомления', widget=forms.TextInput(attrs={'class': 'input', 'id': 'id_title'}))
+    message = forms.CharField(widget=forms.Textarea(attrs={'rows': 4, 'class': 'input', 'id': 'id_message'}), label='Сообщение')
+    notification_type = forms.ChoiceField(choices=TYPE_CHOICES, label='Тип уведомления', widget=forms.Select(attrs={'class': 'input', 'id': 'id_notification_type'}))
+    recipient_type = forms.ChoiceField(choices=RECIPIENT_TYPE_CHOICES, label='Получатели', widget=forms.Select(attrs={'class': 'input', 'id': 'id_recipient_type'}))
 
 
 class ExternalLoginForm(forms.Form):

@@ -83,10 +83,9 @@ class SentNotification(models.Model):
     
     RECIPIENT_TYPE_CHOICES = [
         ('all', 'Все пользователи'),
-        ('admins', 'Администраторы'),
-        ('managers', 'Менеджеры'),
-        ('workers', 'Работники'),
-        ('specific', 'Конкретный пользователь'),
+        ('ssk', 'ССК'),
+        ('iko', 'ИКО'),
+        ('foreman', 'Прораб'),
     ]
     
     title = models.CharField('Заголовок', max_length=200)
