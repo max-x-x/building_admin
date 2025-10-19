@@ -1,0 +1,556 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Отчеты - Космическая Админ Панель</title>
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <div class="panel glow-effect">
+      <h1>📊 Генерация общих отчетов</h1>
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
+        Создание и управление отчетами по всем объектам и процессам
+      </p>
+      <div style="text-align: center;">
+        <a href="{% url 'dashboard' %}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'">
+          <span style="font-size: 1.2rem;">🏠</span>
+          <span>Вернуться на дашборд</span>
+        </a>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>📈 Типы отчетов</h2>
+      
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; margin: 2rem 0;">
+        <!-- Перечни работ по объектам -->
+        <div style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem;">📋</div>
+            <div>
+              <h3 style="margin: 0; color: var(--text-primary);">Перечни работ по объектам</h3>
+              <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">Список работ для каждого объекта</p>
+            </div>
+          </div>
+          
+          <!-- Секция выбора объекта -->
+          <div id="objectSelectorSection" style="display: none; margin-bottom: 1rem; padding: 1rem; background: rgba(255, 255, 255, 0.05); border-radius: 8px; border: 1px solid var(--border-color);">
+            <h4 style="margin: 0 0 1rem 0; color: var(--text-primary);">Выберите объект:</h4>
+            <select id="objectSelect" style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem; margin-bottom: 1rem;">
+              <option value="">Загрузка объектов...</option>
+            </select>
+            <div style="display: flex; gap: 1rem;">
+              <button id="generateWorkListButton" onclick="generateWorkListReport()" style="padding: 0.75rem 1.5rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; position: relative; overflow: hidden;">
+                <span id="generateWorkListText">📊 Сгенерировать отчет</span>
+                <div id="generateWorkListLoader" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                  <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                </div>
+              </button>
+              <button onclick="hideObjectSelector()" style="padding: 0.75rem 1.5rem; background: #6c757d; color: white; border: none; border-radius: 8px; cursor: pointer;">Отмена</button>
+            </div>
+          </div>
+          
+          <button id="mainGenerateButton" onclick="showObjectSelector()" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+            📊 Сгенерировать отчет
+          </button>
+        </div>
+
+        <!-- Перечень работ -->
+        <div style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem;">🔧</div>
+            <div>
+              <h3 style="margin: 0; color: var(--text-primary);">Перечень работ</h3>
+              <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">Общий список всех работ</p>
+            </div>
+          </div>
+             <button id="workListsButton" onclick="generateWorkListsReport()" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+               <span id="workListsText">📊 Сгенерировать отчет</span>
+               <div id="workListsLoader" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                 <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+               </div>
+             </button>
+        </div>
+
+        <!-- Графики -->
+        <div style="background: var(--card-bg); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border-color); transition: all 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 8px 25px rgba(0,0,0,0.1)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='none'">
+          <div style="display: flex; align-items: center; gap: 1rem; margin-bottom: 1rem;">
+            <div style="font-size: 2rem;">📈</div>
+            <div>
+              <h3 style="margin: 0; color: var(--text-primary);">Графики</h3>
+              <p style="margin: 0.5rem 0 0 0; color: var(--text-secondary); font-size: 0.9rem;">Визуализация данных и статистики</p>
+            </div>
+          </div>
+             <button id="chartsButton" onclick="generateChartsReport()" style="width: 100%; padding: 0.75rem; background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%); color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.3s ease; position: relative; overflow: hidden;" onmouseover="this.style.transform='translateY(-1px)'" onmouseout="this.style.transform='translateY(0)'">
+               <span id="chartsText">📊 Сгенерировать отчет</span>
+               <div id="chartsLoader" style="display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);">
+                 <div style="width: 20px; height: 20px; border: 2px solid rgba(255,255,255,0.3); border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+               </div>
+             </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+
+  <script>
+    let objects = [];
+
+    function showObjectSelector() {
+      const section = document.getElementById('objectSelectorSection');
+      const mainButton = document.getElementById('mainGenerateButton');
+      section.style.display = 'block';
+      mainButton.style.display = 'none';
+      loadObjects();
+    }
+
+    function hideObjectSelector() {
+      const section = document.getElementById('objectSelectorSection');
+      const mainButton = document.getElementById('mainGenerateButton');
+      section.style.display = 'none';
+      mainButton.style.display = 'block';
+    }
+
+    async function loadObjects() {
+      try {
+        const response = await fetch('https://building-api.itc-hub.ru/api/v1/objects', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+            'Content-Type': 'application/json'
+          }
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          objects = data.items || [];
+          const select = document.getElementById('objectSelect');
+          select.innerHTML = '<option value="">Выберите объект...</option>';
+          
+          objects.forEach(obj => {
+            const option = document.createElement('option');
+            option.value = obj.id;
+            option.textContent = `${obj.name} (ID: ${obj.id})`;
+            select.appendChild(option);
+          });
+        } else {
+          throw new Error('Ошибка загрузки объектов');
+        }
+      } catch (error) {
+        document.getElementById('objectSelect').innerHTML = '<option value="">Ошибка загрузки объектов</option>';
+      }
+    }
+
+    async function generateWorkListReport() {
+      const objectId = document.getElementById('objectSelect').value;
+      if (!objectId) {
+        alert('Выберите объект!');
+        return;
+      }
+
+      const selectedObject = objects.find(obj => obj.id == objectId);
+      if (!selectedObject) {
+        alert('Объект не найден!');
+        return;
+      }
+
+      const button = document.getElementById('generateWorkListButton');
+      const text = document.getElementById('generateWorkListText');
+      const loader = document.getElementById('generateWorkListLoader');
+
+      text.style.display = 'none';
+      loader.style.display = 'block';
+      button.disabled = true;
+
+      try {
+        const response = await fetch(`https://building-api.itc-hub.ru/api/v1/work-plans/list?object_id=${objectId}`, {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error('Ошибка получения работ');
+        }
+
+        const data = await response.json();
+        const workPlans = data.items || [];
+        
+        let allWorkItems = [];
+        workPlans.forEach(plan => {
+          if (plan.work_items && plan.work_items.length > 0) {
+            allWorkItems = allWorkItems.concat(plan.work_items);
+          }
+        });
+
+        if (allWorkItems.length === 0) {
+          alert(`Для объекта "${selectedObject.name}" еще не назначен перечень работ`);
+          return;
+        }
+
+        generateExcelReport(selectedObject, allWorkItems);
+        hideObjectSelector();
+
+      } catch (error) {
+        alert('Ошибка при получении данных: ' + error.message);
+      } finally {
+        text.style.display = 'block';
+        loader.style.display = 'none';
+        button.disabled = false;
+      }
+    }
+
+    function generateExcelReport(object, workItems) {
+      // Создаем данные для Excel в том же формате что и в оригинальном файле
+      const excelData = [];
+      
+      // Заголовки (пустая строка как в оригинале)
+      excelData.push(['', '', '', '', '', '', '']);
+      
+      // Данные работ
+      workItems.forEach(item => {
+        const row = [
+          item.name || '', // Название работы
+          item.quantity || '', // Количество
+          item.unit || '', // Единица измерения
+          item.start_date || '', // Дата начала
+          item.end_date || '', // Дата окончания
+          object.address || object.name, // Адрес объекта
+          object.address || object.name  // Адрес объекта (дублируется)
+        ];
+        excelData.push(row);
+      });
+
+      // Создаем CSV файл (проще чем Excel)
+      let csvContent = '';
+      excelData.forEach(row => {
+        csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+      });
+
+      // Скачиваем файл
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Перечень_работ_${object.name.replace(/[^a-zA-Zа-яА-Я0-9\s]/g, '').replace(/\s+/g, '_')}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('Отчет успешно сгенерирован и скачан!');
+    }
+
+    async function generateWorkListsReport() {
+      console.log('generateWorkListsReport вызвана');
+      
+      // Показываем анимацию загрузки
+      const button = document.getElementById('workListsButton');
+      const text = document.getElementById('workListsText');
+      const loader = document.getElementById('workListsLoader');
+      
+      button.disabled = true;
+      text.style.opacity = '0';
+      loader.style.display = 'block';
+      
+      try {
+        // Получаем все объекты
+        const objectsResponse = await fetch('https://building-api.itc-hub.ru/api/v1/objects', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!objectsResponse.ok) {
+          throw new Error('Ошибка получения объектов');
+        }
+
+        const objectsData = await objectsResponse.json();
+        const objects = objectsData.items || [];
+        
+        // Собираем все работы со всех объектов
+        let allWorkItems = [];
+        
+        for (const object of objects) {
+          try {
+            const workResponse = await fetch(`https://building-api.itc-hub.ru/api/v1/work-plans/list?object_id=${object.id}`, {
+              headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (workResponse.ok) {
+              const workData = await workResponse.json();
+              const workPlans = workData.items || [];
+              
+              workPlans.forEach(plan => {
+                if (plan.work_items && plan.work_items.length > 0) {
+                  plan.work_items.forEach(workItem => {
+                    allWorkItems.push({
+                      ...workItem,
+                      object: object
+                    });
+                  });
+                }
+              });
+            }
+          } catch (error) {
+            // Игнорируем ошибки для отдельных объектов
+          }
+        }
+
+        if (allWorkItems.length === 0) {
+          alert('Не найдено ни одной работы для генерации отчета');
+          return;
+        }
+
+        // Генерируем Excel файл в формате "Перечень работ СОК общий ИТОГ"
+        generateWorkListsExcel(allWorkItems);
+        
+      } catch (error) {
+        alert('Ошибка при получении данных: ' + error.message);
+      } finally {
+        // Скрываем анимацию загрузки
+        button.disabled = false;
+        text.style.opacity = '1';
+        loader.style.display = 'none';
+      }
+    }
+
+    async function generateChartsReport() {
+      console.log('generateChartsReport вызвана');
+      
+      // Показываем анимацию загрузки
+      const button = document.getElementById('chartsButton');
+      const text = document.getElementById('chartsText');
+      const loader = document.getElementById('chartsLoader');
+      
+      button.disabled = true;
+      text.style.opacity = '0';
+      loader.style.display = 'block';
+      
+      try {
+        // Получаем все объекты
+        const objectsResponse = await fetch('https://building-api.itc-hub.ru/api/v1/objects', {
+          headers: {
+            'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+            'Content-Type': 'application/json'
+          }
+        });
+
+        if (!objectsResponse.ok) {
+          throw new Error('Ошибка получения объектов');
+        }
+
+        const objectsData = await objectsResponse.json();
+        const objects = objectsData.items || [];
+        
+        // Собираем данные для графиков
+        let chartsData = [];
+        
+        for (const object of objects) {
+          try {
+            const workResponse = await fetch(`https://building-api.itc-hub.ru/api/v1/work-plans/list?object_id=${object.id}`, {
+              headers: {
+                'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJiNmVmYmJlMy1lMGM0LTRkOTYtYWI2NC0zYWJkNDQ3MzIyYTUiLCJyb2xlIjoiZm9yZW1hbiIsInR5cGUiOiJhY2Nlc3MiLCJleHAiOjE3NjE0MDA4NTYsImlhdCI6MTc2MDc5NjA1Nn0.SJAiNPWOLmdk--1pWK4bbIuKsaipt4yLQ-1UTVonSJE',
+                'Content-Type': 'application/json'
+              }
+            });
+
+            if (workResponse.ok) {
+              const workData = await workResponse.json();
+              const workPlans = workData.items || [];
+              
+              let objectWorkItems = [];
+              workPlans.forEach(plan => {
+                if (plan.work_items && plan.work_items.length > 0) {
+                  plan.work_items.forEach(workItem => {
+                    objectWorkItems.push(workItem);
+                  });
+                }
+              });
+
+              if (objectWorkItems.length > 0) {
+                chartsData.push({
+                  object: object,
+                  workItems: objectWorkItems
+                });
+              }
+            }
+          } catch (error) {
+            // Игнорируем ошибки для отдельных объектов
+          }
+        }
+
+        if (chartsData.length === 0) {
+          alert('Не найдено данных для генерации графиков');
+          return;
+        }
+
+        // Генерируем Excel файл в формате "Графики"
+        generateChartsExcel(chartsData);
+        
+      } catch (error) {
+        alert('Ошибка при получении данных: ' + error.message);
+      } finally {
+        // Скрываем анимацию загрузки
+        button.disabled = false;
+        text.style.opacity = '1';
+        loader.style.display = 'none';
+      }
+    }
+
+    function generateWorkListsExcel(workItems) {
+      console.log('generateWorkListsExcel вызвана, количество работ:', workItems.length);
+      // Создаем данные для Excel в формате "Перечень работ СОК общий ИТОГ"
+      const excelData = [];
+      
+      // Пустая строка
+      excelData.push(['', '', '', '', '', '', '', '', '', '']);
+      
+      // Заголовки
+      excelData.push([
+        'ID',
+        'Наименование работы',
+        'Адрес',
+        'Объем',
+        'Единицы измерений',
+        'КПГЗ',
+        'Дата начала',
+        'Дата окончания',
+        'Сущность ГПР',
+        ''
+      ]);
+      
+      // Данные работ
+      workItems.forEach((item, index) => {
+        const row = [
+          item.id || `ID_${index + 1}`,
+          item.name || '',
+          item.object.address || item.object.name || '',
+          item.quantity || '',
+          item.unit || '',
+          '02.03.03.11', // КПГЗ - фиксированное значение
+          item.start_date || '',
+          item.end_date || '',
+          item.name || '', // Сущность ГПР = название работы
+          ''
+        ];
+        excelData.push(row);
+      });
+
+      // Создаем CSV файл
+      let csvContent = '';
+      excelData.forEach(row => {
+        csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+      });
+
+      // Скачиваем файл
+      console.log('Создаем файл для скачивания...');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'Перечень_работ_СОК_общий_ИТОГ.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      console.log('Кликаем по ссылке для скачивания...');
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('Отчет "Перечень работ" успешно сгенерирован и скачан!');
+    }
+
+    function generateChartsExcel(chartsData) {
+      // Создаем данные для Excel в формате "Графики"
+      const excelData = [];
+      
+      chartsData.forEach((chart, chartIndex) => {
+        // Название объекта
+        excelData.push([chart.object.address || chart.object.name, '', '', '']);
+        
+        // Заголовки
+        excelData.push(['№', 'Этап работ', 'Дата начала', 'Дата окончания']);
+        
+        // Данные работ для объекта
+        chart.workItems.forEach((item, index) => {
+          const row = [
+            index + 1,
+            item.name || '',
+            item.start_date || '',
+            item.end_date || ''
+          ];
+          excelData.push(row);
+        });
+        
+        // Пустая строка между объектами (кроме последнего)
+        if (chartIndex < chartsData.length - 1) {
+          excelData.push(['', '', '', '']);
+        }
+      });
+
+      // Создаем CSV файл
+      let csvContent = '';
+      excelData.forEach(row => {
+        csvContent += row.map(cell => `"${cell}"`).join(',') + '\n';
+      });
+
+      // Скачиваем файл
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'Графики.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('Отчет "Графики" успешно сгенерирован и скачан!');
+    }
+
+    function generateReport(type) {
+      if (type === 'work_lists_by_objects') {
+        showObjectSelector();
+        return;
+      }
+      
+      const reportTypes = {
+        'work_lists': 'Перечень работ',
+        'charts': 'Графики'
+      };
+      
+      const reportName = reportTypes[type] || 'Отчет';
+      
+      if (confirm(`Сгенерировать ${reportName}?`)) {
+        // Показываем индикатор загрузки
+        const button = event.target;
+        const originalText = button.textContent;
+        button.textContent = '⏳ Генерация...';
+        button.disabled = true;
+        
+        // Имитируем генерацию отчета
+        setTimeout(() => {
+          alert(`${reportName} успешно сгенерирован!`);
+          button.textContent = originalText;
+          button.disabled = false;
+        }, 2000);
+      }
+    }
+  </script>
+</body>
+</html>

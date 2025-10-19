@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Объекты - Космическая Админ Панель</title>
+  <title>Объекты - СтройКонтроль Панель</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -22,6 +22,29 @@
         </button>
       </div>
 
+      <form id="add-object-form" method="post">
+        {% csrf_token %}
+        <h2>✨ Добавление нового объекта</h2>
+        
+        <div class="form-group">
+          <label for="name">🏗️ Название объекта</label>
+          <input type="text" id="name" name="name" placeholder="Введите название объекта" required>
+        </div>
+
+        <div class="form-group">
+          <label for="address">📍 Адрес объекта</label>
+          <input type="text" id="address" name="address" placeholder="Введите полный адрес объекта" required>
+        </div>
+
+        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+          <button type="submit" class="btn btn-accent">
+            🚀 Создать объект
+          </button>
+          <button type="button" class="btn btn-danger" onclick="hideForm()">
+            ❌ Отмена
+          </button>
+        </div>
+      </form>
 
       <div class="tabs">
         <button class="tab-button active" onclick="switchTab('active')">
@@ -93,20 +116,6 @@
             </div>
             {% endif %}
             
-            {% if obj.deliveries_count %}
-            <div class="object-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🚚</span>
-                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
-              </div>
-              {% if obj.prescriptions_count %}
-              <div class="stat-item">
-                <span class="stat-icon">⚠️</span>
-                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
           </div>
           
           <div class="card-footer">
@@ -176,20 +185,6 @@
             </div>
             {% endif %}
             
-            {% if obj.deliveries_count %}
-            <div class="object-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🚚</span>
-                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
-              </div>
-              {% if obj.prescriptions_count %}
-              <div class="stat-item">
-                <span class="stat-icon">⚠️</span>
-                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
           </div>
           
           <div class="card-footer">
@@ -259,20 +254,6 @@
             </div>
             {% endif %}
             
-            {% if obj.deliveries_count %}
-            <div class="object-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🚚</span>
-                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
-              </div>
-              {% if obj.prescriptions_count %}
-              <div class="stat-item">
-                <span class="stat-icon">⚠️</span>
-                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
           </div>
           
           <div class="card-footer">
@@ -342,20 +323,6 @@
             </div>
             {% endif %}
             
-            {% if obj.deliveries_count %}
-            <div class="object-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🚚</span>
-                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
-              </div>
-              {% if obj.prescriptions_count %}
-              <div class="stat-item">
-                <span class="stat-icon">⚠️</span>
-                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
           </div>
           
           <div class="card-footer">
@@ -425,20 +392,6 @@
             </div>
             {% endif %}
             
-            {% if obj.deliveries_count %}
-            <div class="object-stats">
-              <div class="stat-item">
-                <span class="stat-icon">🚚</span>
-                <span class="stat-text">{{ obj.deliveries_count }} поставок</span>
-              </div>
-              {% if obj.prescriptions_count %}
-              <div class="stat-item">
-                <span class="stat-icon">⚠️</span>
-                <span class="stat-text">{{ obj.prescriptions_count }} нарушений</span>
-              </div>
-              {% endif %}
-            </div>
-            {% endif %}
           </div>
           <div class="card-footer">
             <div class="object-uuid">{{ obj.uuid_obj|truncatechars:20 }}</div>
@@ -455,29 +408,6 @@
         </div>
       </div>
 
-      <form id="add-object-form" method="post">
-        {% csrf_token %}
-        <h2>✨ Добавление нового объекта</h2>
-        
-        <div class="form-group">
-          <label for="name">🏗️ Название объекта</label>
-          <input type="text" id="name" name="name" placeholder="Введите название объекта" required>
-        </div>
-
-        <div class="form-group">
-          <label for="address">📍 Адрес объекта</label>
-          <input type="text" id="address" name="address" placeholder="Введите полный адрес объекта" required>
-        </div>
-
-        <div style="display: flex; gap: 1rem; margin-top: 2rem;">
-          <button type="submit" class="btn btn-accent">
-            🚀 Создать объект
-          </button>
-          <button type="button" class="btn btn-danger" onclick="hideForm()">
-            ❌ Отмена
-          </button>
-        </div>
-      </form>
     </div>
   </div>
 

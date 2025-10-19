@@ -4,16 +4,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Космическая Админ Панель - Дашборд</title>
+  <title>СтройКонтроль Панель - Дашборд</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="page">
     <div class="panel glow-effect">
-      <h1>🚀 Космическая Админ Панель</h1>
+      <h1>🚀 СтройКонтроль Панель</h1>
       <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 3rem;">
-        Добро пожаловать в центр управления космическими операциями
+        Добро пожаловать в центр управления операциями
       </p>
     </div>
 
@@ -117,7 +117,7 @@
           <div class="card-icon">📦</div>
           <h3>Поставки</h3>
           <p>Управление поставками материалов</p>
-          <div class="card-status chip chip-info">0 поставок</div>
+          <div class="card-status chip chip-info">{{ total_deliveries }} поставок</div>
         </a>
 
     <a href="{% url 'laboratory' %}" class="dashboard-card">
@@ -133,9 +133,9 @@
     <div class="panel">
       <h2>⚡ Быстрые действия</h2>
       <div class="quick-actions">
-        <button class="btn btn-accent">
+        <a href="{% url 'reports' %}" class="btn btn-accent" target="_blank">
           📊 Генерация общих отчетов
-        </button>
+        </a>
         
         <a href="{% url 'maintenance' %}" class="btn btn-warn">
           🔧 Техническое обслуживание

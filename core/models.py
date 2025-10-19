@@ -140,6 +140,8 @@ class MaintenanceTicket(models.Model):
     ticket_id = models.CharField('ID тикета', max_length=50, unique=True)
     title = models.CharField('Заголовок', max_length=200)
     description = models.TextField('Описание')
+    email = models.EmailField('Email', max_length=254)
+    user_id = models.CharField('ID пользователя', max_length=100)
     priority = models.CharField('Приоритет', max_length=10, choices=PRIORITY_CHOICES, default='medium')
     status = models.CharField('Статус', max_length=15, choices=STATUS_CHOICES, default='open')
     source = models.CharField('Источник', max_length=10, choices=SOURCE_CHOICES, default='api')

@@ -101,8 +101,9 @@ def dashboard(request):
                     try:
                         from datetime import datetime
                         dt = datetime.fromisoformat(visit_date_raw.replace('Z', '+00:00'))
-                        # Для отладки выводим даты
-                        today_visits += 1
+                        # Проверяем, что посещение было сегодня
+                        if dt.date() == today:
+                            today_visits += 1
                     except Exception as e:
                         pass
     except requests.RequestException as e:
@@ -168,6 +169,25 @@ def dashboard(request):
                 laboratory_count = len(data.get('items', []))
     except requests.RequestException as e:
         pass
+
+    # Получаем количество поставок из API
+    total_deliveries = 0
+    try:
+        access_token = request.session.get('access_token')
+        if access_token:
+            response = requests.get(
+                f'{settings.BUILDING_API_URL}/deliveries/list',
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Content-Type': 'application/json'
+                },
+                timeout=15
+            )
+            if response.status_code == 200:
+                data = response.json()
+                total_deliveries = data.get('total', 0)
+    except requests.RequestException as e:
+        pass
     
     services_status = []
     working_modules_count = 0
@@ -200,6 +220,7 @@ def dashboard(request):
         "open_tickets": open_tickets,
         "active_objects": active_objects,
         "laboratory_count": laboratory_count,
+        "total_deliveries": total_deliveries,
         "services_status": services_status,
         "working_modules_count": working_modules_count,
     }
@@ -365,8 +386,9 @@ def users(request):
             'phone': item.get('phone') or '',
             'role': role_display_map.get(role_key, role_key or ''),
             'role_key': role_key or '',
-            'objects_count': 0,
-            'violations_count': 0,
+            'objects_count': item.get('objects_count', 0),
+            'violations_count': item.get('violations_total', 0),
+            'violations_closed': item.get('violations_closed', 0),
             'status': 'active',
             'objects': [],
         })
@@ -508,17 +530,28 @@ def visits(request):
 
             user_id = request.POST.get('user_id')
             object_id = request.POST.get('object_id')
+            area_id = request.POST.get('area_id')
             visit_date = request.POST.get('visit_date')
             user_role = request.POST.get('user_role')
 
-            if not user_id or not object_id or not visit_date:
+            if not user_id or not object_id or not area_id or not visit_date:
                 messages.error(request, "Заполните все поля")
                 return redirect('visits')
+
+            # Конвертируем дату в ISO формат (добавляем время по умолчанию)
+            if visit_date:
+                from datetime import datetime
+                try:
+                    dt = datetime.fromisoformat(visit_date)
+                    visit_date = dt.strftime('%Y-%m-%dT12:00:00Z')
+                except:
+                    pass
 
             payload = {
                 "user_id": user_id,
                 "user_role": user_role or "",
                 "object_id": int(object_id),
+                "area_id": int(area_id),
                 "visit_date": visit_date
             }
 
@@ -635,6 +668,7 @@ def visits(request):
                     "object_id": object_id,
                     "object_name": object_name,
                     "object_address": object_address,
+                    "area_name": session.get('area_name'),
                     "visit_date": visit_date_formatted,
                     "status": "completed"
                 })
@@ -713,50 +747,6 @@ def visits(request):
 
 @login_required
 def maintenance(request):
-    # Создаем тестовые тикеты если их нет
-    if MaintenanceTicket.objects.count() == 0:
-        # Создаем тестовые тикеты
-        test_tickets = [
-            {
-                'ticket_id': 'TICKET-001',
-                'title': 'Ошибка подключения к базе данных',
-                'description': 'Сервис не может подключиться к основной базе данных. Ошибка возникает при попытке выполнения запросов.',
-                'status': 'open',
-                'from_user': 'Иванов И.И. (Основной монолит)'
-            },
-            {
-                'ticket_id': 'TICKET-002',
-                'title': 'Медленная загрузка страниц',
-                'description': 'Пользователи жалуются на медленную загрузку страниц в админ панели.',
-                'status': 'open',
-                'from_user': 'Петров П.П. (Админ панель)'
-            },
-            {
-                'ticket_id': 'TICKET-003',
-                'title': 'Проблема с отправкой уведомлений',
-                'description': 'Уведомления не доставляются пользователям через email.',
-                'status': 'open',
-                'from_user': 'Сидоров С.С. (Система уведомлений)'
-            },
-            {
-                'ticket_id': 'TICKET-004',
-                'title': 'Ошибка в API полигонов',
-                'description': 'API возвращает некорректные координаты полигонов объектов.',
-                'status': 'open',
-                'from_user': 'Козлов К.К. (Сервис с полигонами)'
-            },
-            {
-                'ticket_id': 'TICKET-005',
-                'title': 'Проблема с аутентификацией',
-                'description': 'Некоторые пользователи не могут войти в систему.',
-                'status': 'open',
-                'from_user': 'Смирнов С.С. (Система аутентификации)'
-            }
-        ]
-        
-        for ticket_data in test_tickets:
-            MaintenanceTicket.objects.create(**ticket_data)
-    
     # Получаем все тикеты
     tickets = MaintenanceTicket.objects.all().order_by('-created_at')
     
@@ -781,31 +771,29 @@ def api_create_ticket(request):
     try:
         data = json.loads(request.body)
         
+        # Проверяем обязательные поля
+        required_fields = ['title', 'description', 'email', 'user_id']
+        missing_fields = [field for field in required_fields if not data.get(field)]
+        
+        if missing_fields:
+            return JsonResponse({
+                'success': False,
+                'error': f'Обязательные поля отсутствуют: {", ".join(missing_fields)}'
+            }, status=400)
+        
         # Генерируем уникальный ID тикета
         ticket_id = f"TICKET-{uuid.uuid4().hex[:8].upper()}"
         
         # Создаем тикет
         ticket = MaintenanceTicket.objects.create(
             ticket_id=ticket_id,
-            title=data.get('title', 'Без заголовка'),
-            description=data.get('description', ''),
+            title=data.get('title'),
+            description=data.get('description'),
+            email=data.get('email'),
+            user_id=data.get('user_id'),
             from_user=data.get('from_user', 'Система'),
             source='api'
         )
-        
-        # Отправляем уведомление админам о новом тикете
-        try:
-            access_token = data.get('access_token', '')
-            if access_token:
-                notification_result = send_notification_to_api(
-                    recipient_type='admin',
-                    subject=f'Новый тикет #{ticket_id}',
-                    body=f'Создан новый тикет: {ticket.title}\nОт: {ticket.from_user}',
-                    access_token=access_token
-                )
-                print(f"✅ Уведомление о новом тикете отправлено: {notification_result}")
-        except Exception as e:
-            print(f"❌ Ошибка отправки уведомления о новом тикете: {e}")
         
         return JsonResponse({
             'success': True,
@@ -948,29 +936,29 @@ def api_reply_ticket(request):
             message=message
         )
         
-        # Отправляем уведомление пользователю о закрытии тикета ПЕРЕД закрытием
+        # Отправляем уведомление конкретному пользователю о закрытии тикета
         try:
-            access_token = data.get('access_token', '')
-            if access_token:
-                notification_result = send_notification_to_api(
-                    recipient_type='all',  # Отправляем всем, так как не знаем конкретного пользователя
-                    subject=f'Тикет #{ticket.ticket_id} закрыт',
-                    body=f'Ваш тикет "{ticket.title}" был закрыт.\nОтвет: {message}',
-                    access_token=access_token
-                )
-                print(f"📤 Отправка уведомления о закрытии тикета #{ticket.ticket_id}:")
-                print(f"   Статус: {notification_result['success']}")
-                print(f"   Код ответа: {notification_result['status_code']}")
-                print(f"   Ответ API: {notification_result['response_text']}")
-            else:
-                print(f"⚠️ Access token не предоставлен для тикета #{ticket.ticket_id}")
+            notification_data = {
+                "user_id": ticket.user_id,
+                "email": ticket.email,
+                "subject": f"Тикет #{ticket.ticket_id} закрыт",
+                "message": f'Ваш тикет "{ticket.title}" был закрыт.\nОтвет: {message}'
+            }
+            
+            notif_response = requests.post(
+                f'{settings.BUILDING_NOTIFICATIONS_URL}/send/notification',
+                headers={'Content-Type': 'application/json'},
+                json=notification_data,
+                timeout=10
+            )
+            print(f"📤 Уведомление пользователю отправлено: {notif_response.status_code}")
         except Exception as e:
-            print(f"❌ Ошибка отправки уведомления о закрытии тикета #{ticket.ticket_id}: {e}")
+            print(f"❌ Ошибка отправки уведомления пользователю: {e}")
         
-        # Закрываем тикет ПОСЛЕ отправки уведомления
+        # Закрываем тикет
         ticket.status = 'closed'
         ticket.save()
-        print(f"✅ Тикет #{ticket.ticket_id} закрыт после отправки уведомления")
+        print(f"✅ Тикет #{ticket.ticket_id} закрыт")
         
         return JsonResponse({
             'success': True,
@@ -1138,14 +1126,16 @@ def deliveries(request):
                 return JsonResponse({'success': False, 'error': 'Ошибка авторизации'}, status=401)
             
             object_id = request.POST.get('object_id')
+            work_item_id = request.POST.get('work_item_id')
             planned_date = request.POST.get('planned_date')
             notes = request.POST.get('notes', '')
             
-            if not object_id or not planned_date:
+            if not object_id or not work_item_id or not planned_date:
                 return JsonResponse({'success': False, 'error': 'Заполните все обязательные поля'}, status=400)
             
             data = {
                 "object_id": int(object_id),
+                "work_item_id": int(work_item_id),
                 "planned_date": planned_date,
                 "notes": notes
             }
@@ -1161,7 +1151,65 @@ def deliveries(request):
             )
             
             if response.status_code == 200 or response.status_code == 201:
-                return JsonResponse({'success': True, 'message': 'Поставка успешно создана'})
+                print("Поставка создана успешно, начинаем отправку уведомлений")
+                # Отправляем уведомления
+                try:
+                    # Получаем информацию об объекте
+                    object_response = requests.get(
+                        f'{settings.BUILDING_API_URL}/objects/{object_id}',
+                        headers={
+                            'Authorization': f'Bearer {access_token}',
+                            'Content-Type': 'application/json'
+                        },
+                        timeout=15
+                    )
+                    
+                    if object_response.status_code == 200:
+                        object_data = object_response.json()
+                        object_name = object_data.get('name', 'Неизвестный объект')
+                        
+                        # Отправляем уведомление прорабу
+                        if object_data.get('foreman'):
+                            foreman_data = object_data['foreman']
+                            notification_data = {
+                                "user_id": foreman_data['id'],
+                                "email": foreman_data['email'],
+                                "subject": "Запланирована новая поставка",
+                                "message": f"На объект {object_name} запланирована новая поставка на {planned_date}"
+                            }
+                            notif_response = requests.post(
+                                f'{settings.BUILDING_NOTIFICATIONS_URL}/send/notification',
+                                headers={'Content-Type': 'application/json'},
+                                json=notification_data,
+                                timeout=10
+                            )
+                            print(f"Уведомление прорабу отправлено: {notif_response.status_code}")
+                        
+                        # Отправляем уведомление ССК
+                        if object_data.get('ssk'):
+                            ssk_data = object_data['ssk']
+                            notification_data = {
+                                "user_id": ssk_data['id'],
+                                "email": ssk_data['email'],
+                                "subject": "Запланирована новая поставка",
+                                "message": f"На объект {object_name} запланирована новая поставка на {planned_date}"
+                            }
+                            notif_response = requests.post(
+                                f'{settings.BUILDING_NOTIFICATIONS_URL}/send/notification',
+                                headers={'Content-Type': 'application/json'},
+                                json=notification_data,
+                                timeout=10
+                            )
+                            print(f"Уведомление ССК отправлено: {notif_response.status_code}")
+                        
+                        return JsonResponse({'success': True, 'message': f'Поставка создана! Объект: {object_name}. Уведомления отправлены.'})
+                    else:
+                        return JsonResponse({'success': True, 'message': f'Поставка создана! Ошибка получения данных объекта: {object_response.status_code}'})
+                except Exception as e:
+                    print(f"Ошибка отправки уведомлений: {e}")
+                    import traceback
+                    traceback.print_exc()
+                    return JsonResponse({'success': True, 'message': f'Поставка создана! Ошибка уведомлений: {str(e)}'})
             else:
                 return JsonResponse({'success': False, 'error': f'Ошибка API: {response.status_code}'}, status=400)
                 
@@ -1219,6 +1267,7 @@ def deliveries(request):
                 print(f"✅ API Objects успешно: получено {len(objects_list)} объектов")
             else:
                 print(f"❌ API Objects ошибка {objects_response.status_code}: {objects_response.text}")
+            
         else:
             print("❌ Токен не найден в сессии для API")
     except requests.RequestException as e:
@@ -1246,6 +1295,95 @@ def deliveries(request):
         "limit": limit,
     }
     return render(request, "deliveries.html", context)
+
+
+@login_required
+def reports(request):
+    context = {}
+    return render(request, "reports.html", context)
+
+@login_required
+def api_user_objects(request, user_id):
+    """API для получения объектов пользователя"""
+    try:
+        access_token = request.session.get('access_token')
+        if not access_token:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+        # Получаем все объекты
+        response = requests.get(
+            f'{settings.BUILDING_API_URL}/objects',
+            headers={
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            },
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            objects_list = data.get('items', [])
+            
+            # Фильтруем объекты, где пользователь является ССК, прорабом или ИКО
+            user_objects = []
+            for obj in objects_list:
+                ssk = obj.get('ssk') or {}
+                foreman = obj.get('foreman') or {}
+                iko = obj.get('iko') or {}
+                
+                if (ssk.get('id') == user_id or 
+                    foreman.get('id') == user_id or 
+                    iko.get('id') == user_id):
+                    user_objects.append({
+                        'id': obj.get('id'),
+                        'name': obj.get('name'),
+                        'address': obj.get('address')
+                    })
+            
+            return JsonResponse({'objects': user_objects})
+        else:
+            return JsonResponse({'error': 'Failed to fetch objects'}, status=500)
+            
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@login_required
+def api_object_detail(request, object_id):
+    """API для получения детальной информации об объекте"""
+    try:
+        access_token = request.session.get('access_token')
+        if not access_token:
+            return JsonResponse({'error': 'Unauthorized'}, status=401)
+        
+        response = requests.get(
+            f'{settings.BUILDING_API_URL}/objects/{object_id}',
+            headers={
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            },
+            timeout=15
+        )
+        
+        if response.status_code == 200:
+            data = response.json()
+            areas = data.get('areas', [])
+            
+            # Извлекаем участки (sub_areas)
+            area_list = []
+            for area in areas:
+                sub_areas = area.get('sub_areas', [])
+                for sub_area in sub_areas:
+                    area_list.append({
+                        'id': sub_area.get('id'),
+                        'name': sub_area.get('name')
+                    })
+            
+            return JsonResponse({'areas': area_list})
+        else:
+            return JsonResponse({'error': 'Failed to fetch object details'}, status=500)
+            
+    except requests.RequestException as e:
+        return JsonResponse({'error': str(e)}, status=500)
 
 @login_required
 def objects_page(request):

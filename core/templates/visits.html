@@ -4,7 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Посещения - Космическая Админ Панель</title>
+  <title>Посещения - СтройКонтроль Панель</title>
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
@@ -12,9 +12,15 @@
   <div class="page">
     <div class="panel glow-effect">
       <h1>📍 Журнал посещений</h1>
-      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 3rem;">
+      <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
         Отслеживание всех посещений объектов сотрудниками
       </p>
+      <div style="text-align: center;">
+        <a href="{% url 'dashboard' %}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'">
+          <span style="font-size: 1.2rem;">🏠</span>
+          <span>Назад к дашборду</span>
+        </a>
+      </div>
     </div>
 
     <div class="panel">
@@ -107,6 +113,9 @@
                 <div class="object-info">
                   <div class="object-name">{{ visit.object_name }}</div>
                   <div class="object-address">{{ visit.object_address }}</div>
+                  {% if visit.area_name %}
+                  <div class="area-name">📍 {{ visit.area_name }}</div>
+                  {% endif %}
                 </div>
               </div>
               
@@ -122,12 +131,7 @@
         {% endfor %}
       </div>
     </div>
-
-    <div class="nav-links">
-      <a href="{% url 'dashboard' %}" class="btn btn-primary">
-        ← Назад к дашборду
-      </a>
-    </div>
+    
   </div>
 
   <!-- Модальное окно детального просмотра посещения -->
@@ -151,11 +155,11 @@
         <button class="close-btn" onclick="closeCreateVisit()">&times;</button>
       </div>
       <div class="modal-body">
-        <form method="post" class="create-form">
+        <form method="post" class="create-form" id="visitForm">
           {% csrf_token %}
           <div class="field">
             <label>Пользователь</label>
-            <select name="user_id" id="create_user_id" required onchange="syncRole()">
+            <select name="user_id" id="create_user_id" required onchange="loadUserObjects()">
               <option value="" disabled selected>Выберите пользователя</option>
               {% for u in users_options %}
               <option value="{{ u.id }}" data-role="{{ u.role }}">{{ u.label }}</option>
@@ -168,19 +172,22 @@
           </div>
           <div class="field">
             <label>Объект</label>
-            <select name="object_id" required>
-              <option value="" disabled selected>Выберите объект</option>
-              {% for o in objects_options %}
-              <option value="{{ o.id }}">{{ o.label }}</option>
-              {% endfor %}
+            <select name="object_id" id="create_object_id" required onchange="loadObjectAreas()" disabled>
+              <option value="" disabled selected>Сначала выберите пользователя</option>
             </select>
           </div>
           <div class="field">
-            <label>Дата</label>
-            <input type="date" name="visit_date" required>
+            <label>Участок</label>
+            <select name="area_id" id="create_area_id" required disabled>
+              <option value="" disabled selected>Сначала выберите объект</option>
+            </select>
           </div>
+           <div class="field">
+             <label>Дата</label>
+             <input type="date" name="visit_date" id="create_visit_date" required style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+           </div>
           <div class="actions">
-            <button type="submit" class="btn btn-primary">Сохранить</button>
+            <button type="submit" class="btn btn-primary" id="submitBtn" disabled>Сохранить</button>
             <button type="button" class="btn" onclick="closeCreateVisit()">Отмена</button>
           </div>
         </form>
@@ -597,6 +604,13 @@
       margin-bottom: 0.25rem;
     }
 
+    .area-name {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-top: 0.25rem;
+      font-style: italic;
+    }
+
     .visit-purpose {
       color: var(--text-secondary);
       font-size: 0.95rem;
@@ -829,15 +843,163 @@
   </style>
 
   <script>
-    function openCreateVisit(){ document.getElementById('createVisitModal').style.display = 'block'; }
-    function closeCreateVisit(){ document.getElementById('createVisitModal').style.display = 'none'; }
-    function syncRole(){
+    let allObjects = [];
+    let allUsers = {{ users_options|safe }};
+    
+    function openCreateVisit(){ 
+      document.getElementById('createVisitModal').style.display = 'block'; 
+      resetForm();
+    }
+    
+    function closeCreateVisit(){ 
+      document.getElementById('createVisitModal').style.display = 'none'; 
+      resetForm();
+    }
+    
+    function resetForm() {
+      document.getElementById('create_user_id').value = '';
+      document.getElementById('create_user_role').value = '';
+      document.getElementById('create_object_id').disabled = true;
+      document.getElementById('create_object_id').innerHTML = '<option value="" disabled selected>Сначала выберите пользователя</option>';
+      document.getElementById('create_area_id').disabled = true;
+      document.getElementById('create_area_id').innerHTML = '<option value="" disabled selected>Сначала выберите объект</option>';
+      document.getElementById('create_visit_date').value = '';
+      document.getElementById('submitBtn').disabled = true;
+    }
+    
+    async function loadUserObjects() {
+      const userId = document.getElementById('create_user_id').value;
+      if (!userId) return;
+      
+      // Синхронизируем роль
       const sel = document.getElementById('create_user_id');
       const role = sel.options[sel.selectedIndex]?.dataset?.role || '';
       const roleMap = { 'foreman':'Прораб', 'ssk':'ССК', 'iko':'ИКО', 'admin':'Админ' };
       document.getElementById('create_user_role').value = roleMap[role] || role || '';
       document.querySelector('input[name="user_role"]').value = role || '';
+      
+      // Загружаем объекты пользователя
+      try {
+        const response = await fetch('/api/user-objects/' + userId + '/');
+        const data = await response.json();
+        
+        const objectSelect = document.getElementById('create_object_id');
+        objectSelect.innerHTML = '<option value="" disabled selected>Выберите объект</option>';
+        
+        if (data.objects && data.objects.length > 0) {
+          data.objects.forEach(obj => {
+            const option = document.createElement('option');
+            option.value = obj.id;
+            option.textContent = obj.name + ' - ' + obj.address;
+            objectSelect.appendChild(option);
+          });
+          objectSelect.disabled = false;
+        } else {
+          objectSelect.innerHTML = '<option value="" disabled selected>Нет доступных объектов</option>';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки объектов:', error);
+        document.getElementById('create_object_id').innerHTML = '<option value="" disabled selected>Ошибка загрузки</option>';
+      }
     }
+    
+    async function loadObjectAreas() {
+      const objectId = document.getElementById('create_object_id').value;
+      if (!objectId) return;
+      
+      try {
+        const response = await fetch('/api/object-detail/' + objectId + '/');
+        const data = await response.json();
+        
+        const areaSelect = document.getElementById('create_area_id');
+        areaSelect.innerHTML = '<option value="" disabled selected>Выберите участок</option>';
+        
+        if (data.areas && data.areas.length > 0) {
+          data.areas.forEach(area => {
+            const option = document.createElement('option');
+            option.value = area.id;
+            option.textContent = area.name;
+            option.dataset.name = area.name;
+            areaSelect.appendChild(option);
+          });
+          areaSelect.disabled = false;
+          checkFormComplete();
+        } else {
+          areaSelect.innerHTML = '<option value="" disabled selected>Нет доступных участков</option>';
+        }
+      } catch (error) {
+        console.error('Ошибка загрузки участков:', error);
+        document.getElementById('create_area_id').innerHTML = '<option value="" disabled selected>Ошибка загрузки</option>';
+      }
+    }
+    
+    function checkFormComplete() {
+      const userId = document.getElementById('create_user_id').value;
+      const objectId = document.getElementById('create_object_id').value;
+      const areaId = document.getElementById('create_area_id').value;
+      const visitDate = document.getElementById('create_visit_date').value;
+      
+      if (userId && objectId && areaId && visitDate) {
+        document.getElementById('submitBtn').disabled = false;
+      } else {
+        document.getElementById('submitBtn').disabled = true;
+      }
+    }
+    
+    // Обработчики событий
+    document.getElementById('create_area_id').addEventListener('change', function() {
+      checkFormComplete();
+    });
+    
+    document.getElementById('create_visit_date').addEventListener('change', checkFormComplete);
+    
+    // Обработка отправки формы
+    document.getElementById('visitForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submitBtn');
+      const originalText = submitBtn.textContent;
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Отправка...';
+      
+      // Собираем данные формы
+      const formData = {
+        user_id: document.getElementById('create_user_id').value,
+        user_role: document.getElementById('create_user_role').value,
+        object_id: parseInt(document.getElementById('create_object_id').value),
+        area_id: parseInt(document.getElementById('create_area_id').value),
+        visit_date: document.getElementById('create_visit_date').value + 'T12:00:00Z'
+      };
+      
+      console.log('Отправляем данные:', formData);
+      
+      try {
+        const response = await fetch('/visits/', {
+          method: 'POST',
+          body: new FormData(this),
+          headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+          }
+        });
+        
+        console.log('Ответ сервера:', response.status, response.statusText);
+        
+        if (response.ok) {
+          alert('Посещение успешно создано!');
+          closeCreateVisit();
+          location.reload();
+        } else {
+          const error = await response.text();
+          alert('Ошибка: ' + error);
+        }
+      } catch (error) {
+        alert('Ошибка сети: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalText;
+      }
+    });
     // Заглушка API для получения детальной информации о посещении
     async function getVisitDetail(visitId) {
       // Имитируем запрос к API
