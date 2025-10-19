@@ -911,6 +911,35 @@ def api_create_memo(request):
         }, status=500)
 
 @csrf_exempt
+@require_http_methods(["GET"])
+def api_get_all_memos(request):
+    """API для получения всех памяток с сортировкой по названию"""
+    try:
+        memos = Memo.objects.all().order_by('title')
+        
+        memos_data = []
+        for memo in memos:
+            memos_data.append({
+                'id': memo.id,
+                'title': memo.title,
+                'description': memo.description,
+                'file_url': memo.file_url,  # Используем поле link из текущей модели
+                'created_at': memo.created_at.isoformat()
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'memos': memos_data,
+            'total': len(memos_data)
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
+
+@csrf_exempt
 @require_http_methods(["POST"])
 def api_reply_ticket(request):
     """API для ответа на тикет"""
