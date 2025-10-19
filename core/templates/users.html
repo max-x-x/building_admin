@@ -11,7 +11,12 @@
 <body>
   <div class="page">
     <div class="panel glow-effect">
-      <h1>👥 Управление пользователями</h1>
+      <div class="header-content">
+        <h1>👥 Управление пользователями</h1>
+        <a href="{% url 'dashboard' %}" class="back-btn">
+          ← Вернуться в меню
+        </a>
+      </div>
       <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 3rem;">
         Просмотр и управление пользователями системы
       </p>
@@ -133,11 +138,6 @@
       </div>
     </div>
 
-    <div class="nav-links">
-      <a href="{% url 'dashboard' %}" class="btn btn-primary">
-        ← Назад к дашборду
-      </a>
-    </div>
   </div>
 
   <!-- Модальное окно детального просмотра пользователя -->
@@ -154,6 +154,44 @@
   </div>
 
   <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .back-btn:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    @media (max-width: 1200px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+    }
+
     .users-stats {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

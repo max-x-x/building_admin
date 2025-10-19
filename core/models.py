@@ -60,7 +60,11 @@ class Invitation(models.Model):
 class Memo(models.Model):
     title = models.CharField('Название', max_length=200)
     description = models.TextField('Описание')
-    link = models.URLField('Ссылка')
+    file_url = models.URLField('Ссылка на файл', max_length=5000, blank=True, null=True)
+    file_name = models.CharField('Имя файла', max_length=255, blank=True, null=True)
+    file_size = models.IntegerField('Размер файла (байты)', blank=True, null=True)
+    object_id = models.IntegerField('ID объекта', blank=True, null=True)
+    object_name = models.CharField('Название объекта', max_length=2049, blank=True, null=True)
     created_at = models.DateTimeField('Дата создания', auto_now_add=True)
     created_by = models.ForeignKey(Admin, on_delete=models.CASCADE, verbose_name='Создано пользователем')
     

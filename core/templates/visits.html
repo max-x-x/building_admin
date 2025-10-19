@@ -11,16 +11,15 @@
 <body>
   <div class="page">
     <div class="panel glow-effect">
-      <h1>📍 Журнал посещений</h1>
+      <div class="header-content">
+        <h1>📍 Журнал посещений</h1>
+        <a href="{% url 'dashboard' %}" class="back-btn">
+          ← Вернуться в меню
+        </a>
+      </div>
       <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
         Отслеживание всех посещений объектов сотрудниками
       </p>
-      <div style="text-align: center;">
-        <a href="{% url 'dashboard' %}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'">
-          <span style="font-size: 1.2rem;">🏠</span>
-          <span>Назад к дашборду</span>
-        </a>
-      </div>
     </div>
 
     <div class="panel">
@@ -196,6 +195,44 @@
   </div>
 
   <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .back-btn:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    @media (max-width: 1200px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+    }
+
     .filters { margin: 1rem 0 2rem; width: 100%; }
     .search-row { width: 100%; margin-bottom: 0.75rem; }
     .search-input { width: 100%; padding: 0.8rem 1rem; border-radius: 12px; border: 1px solid var(--border-color); background: var(--chip-bg); color: var(--text-primary); font-size: 1rem; }

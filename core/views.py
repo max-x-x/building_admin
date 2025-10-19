@@ -853,7 +853,11 @@ def api_get_memos(request):
                 'id': memo.id,
                 'title': memo.title,
                 'description': memo.description,
-                'link': memo.link,
+                'file_url': memo.file_url,
+                'file_name': memo.file_name,
+                'file_size': memo.file_size,
+                'object_id': memo.object_id,
+                'object_name': memo.object_name,
                 'created_at': memo.created_at.isoformat(),
                 'created_by': memo.created_by.email if memo.created_by else None
             })
@@ -974,64 +978,87 @@ def api_reply_ticket(request):
 
 @login_required
 def memos(request):
+    # Получаем список объектов для формы
+    objects_list = []
+    access_token = request.session.get('access_token')
+    if not access_token:
+        return JsonResponse({'error': 'Unauthorized'}, status=401)
+    try:
+        objects_response = requests.get(
+            f'{settings.BUILDING_API_URL}/objects',
+            headers={
+                'Authorization': f'Bearer {access_token}',
+                'Content-Type': 'application/json'
+            },
+            timeout=15
+        )
+        if objects_response.status_code == 200:
+            objects_data = objects_response.json()
+            objects_list = objects_data.get('items', [])
+    except requests.RequestException as e:
+        print(f"❌ Ошибка получения объектов: {e}")
+    
     if request.method == "POST":
-        form = MemoForm(request.POST)
+        form = MemoForm(request.POST, request.FILES, objects_list=objects_list)
         if form.is_valid():
             title = form.cleaned_data['title']
             description = form.cleaned_data['description']
-            link = form.cleaned_data['link']
-
-            # Сохраняем в БД
-            memo = Memo.objects.create(
-                title=title,
-                description=description,
-                link=link,
-                created_by=request.user
-            )
-
-            # Отправляем на API (заглушка)
-            data = {
-                "title": title,
-                "description": description,
-                "link": link
-            }
+            file = form.cleaned_data['file']
+            object_id = form.cleaned_data['object_id']
+            
+            # Находим название объекта
+            object_name = f"Объект #{object_id}"
+            for obj in objects_list:
+                if obj.get('id') == object_id:
+                    object_name = obj.get('name', f"Объект #{object_id}")
+                    # Обрезаем название до 500 символов
+                    if len(object_name) > 500:
+                        object_name = object_name[:497] + "..."
+                    break
+            
             try:
-                # response = requests.post(os.getenv("API_URL") + "/memos/", json=data)
-                # response.raise_for_status()
-                messages.success(request, f"Методичка '{title}' успешно добавлена!")
+                # Загружаем файл на FTP сервер
+                files = {'file': (file.name, file.read(), file.content_type)}
+                upload_response = requests.post(
+                    f'https://building-s3-api.itc-hub.ru/upload/docs/object/{object_id}',
+                    files=files,
+                    timeout=30
+                )
+                
+                if upload_response.status_code == 200:
+                    upload_data = upload_response.json()
+                    file_url = upload_data.get('presigned_url')
+                    file_size = upload_data.get('size')
+                    
+                    # Сохраняем в БД
+                    memo = Memo.objects.create(
+                        title=title,
+                        description=description,
+                        file_url=file_url,
+                        file_name=file.name,
+                        file_size=file_size,
+                        object_id=object_id,
+                        object_name=object_name,
+                        created_by=request.user
+                    )
+                    
+                    messages.success(request, f"Методичка '{title}' успешно добавлена!")
+                    return redirect('memos')
+                else:
+                    messages.error(request, f"Ошибка загрузки файла: {upload_response.status_code}")
+                    
             except requests.RequestException as e:
-                messages.error(request, f"Ошибка при отправке на API: {e}")
-
-            return redirect('memos')
+                messages.error(request, f"Ошибка при загрузке файла: {e}")
     else:
-        form = MemoForm()
+        form = MemoForm(objects_list=objects_list)
 
-    # Получаем методички из БД (пока заглушка для API)
+    # Получаем методички из БД
     memos_list = Memo.objects.all()
-    
-    # Заглушка данных из API
-    api_memos = [
-        {
-            "title": "Техника безопасности на стройке",
-            "description": "Основные правила и требования безопасности при проведении строительных работ",
-            "link": "https://example.com/safety-manual.pdf"
-        },
-        {
-            "title": "Контроль качества бетонных работ",
-            "description": "Методические указания по контролю качества бетонных смесей и конструкций",
-            "link": "https://example.com/concrete-quality.pdf"
-        },
-        {
-            "title": "Документооборот в строительстве",
-            "description": "Порядок ведения документации и отчетности на строительном объекте",
-            "link": "https://example.com/documentation.pdf"
-        }
-    ]
 
     context = {
         "form": form,
         "memos_list": memos_list,
-        "api_memos": api_memos,
+        "objects_list": objects_list,
     }
     return render(request, "memos.html", context)
 

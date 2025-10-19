@@ -26,7 +26,19 @@ class InvitationForm(forms.Form):
 class MemoForm(forms.Form):
     title = forms.CharField(max_length=200, label='Название методички')
     description = forms.CharField(widget=forms.Textarea(attrs={'rows': 4}), label='Описание')
-    link = forms.URLField(label='Ссылка на методичку')
+    file = forms.FileField(label='Файл методички', help_text='Выберите файл для загрузки')
+    object_id = forms.ChoiceField(label='Объект', widget=forms.Select(attrs={'class': 'input', 'id': 'id_object_id'}), choices=[])
+    
+    def __init__(self, *args, **kwargs):
+        objects_list = kwargs.pop('objects_list', [])
+        super().__init__(*args, **kwargs)
+        
+        # Создаем выборы для объектов
+        choices = [('', 'Выберите объект...')]
+        for obj in objects_list:
+            choices.append((obj.get('id'), f"{obj.get('name')} (ID: {obj.get('id')})"))
+        
+        self.fields['object_id'].choices = choices
 
 
 class NotificationForm(forms.Form):

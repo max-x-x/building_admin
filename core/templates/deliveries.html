@@ -11,18 +11,64 @@
 <body>
   <div class="page">
     <div class="panel glow-effect">
-      <h1>📦 Поставки</h1>
+      <div class="header-content">
+        <h1>📦 Поставки</h1>
+        <div class="header-actions">
+          <button class="btn btn-accent" id="show-form-btn">
+            ✨ Добавить поставку
+          </button>
+          <a href="{% url 'dashboard' %}" class="back-btn">
+            ← Вернуться в меню
+          </a>
+        </div>
+      </div>
       <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
         Управление поставками материалов и оборудования
       </p>
-      <div style="text-align: center;">
-        <a href="{% url 'dashboard' %}" style="display: inline-flex; align-items: center; gap: 0.75rem; padding: 0.875rem 1.5rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; text-decoration: none; border-radius: 12px; font-weight: 600; font-size: 1rem; transition: all 0.3s ease; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);" onmouseover="this.style.transform='translateY(-2px)'; this.style.boxShadow='0 6px 20px rgba(102, 126, 234, 0.4)'" onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 4px 15px rgba(102, 126, 234, 0.3)'">
-          <span style="font-size: 1.2rem;">🏠</span>
-          <span>Вернуться на дашборд</span>
-        </a>
-      </div>
     </div>
 
+    <!-- Форма добавления поставки -->
+    <div class="panel" id="add-delivery-form" style="display: none;">
+      <h2>➕ Добавить поставку</h2>
+      <form id="deliveryForm" style="max-width: 600px; margin: 0 auto;">
+        {% csrf_token %}
+        <div style="margin-bottom: 1.5rem;">
+          <label for="object_id" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Объект *</label>
+          <select id="object_id" name="object_id" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+            <option value="">Выберите объект...</option>
+            {% for object in objects %}
+              <option value="{{ object.id }}">{{ object.name }} (ID: {{ object.id }})</option>
+            {% endfor %}
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label for="work_item_id" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Работа *</label>
+          <select id="work_item_id" name="work_item_id" required disabled style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+            <option value="">Сначала выберите объект</option>
+          </select>
+        </div>
+        
+        <div style="margin-bottom: 1.5rem;">
+          <label for="planned_date" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Планируемая дата *</label>
+          <input type="date" id="planned_date" name="planned_date" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
+        </div>
+        
+        <div style="margin-bottom: 2rem;">
+          <label for="notes" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Заметки</label>
+          <textarea id="notes" name="notes" rows="4" placeholder="Дополнительная информация о поставке..." style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem; resize: vertical;"></textarea>
+        </div>
+        
+        <div style="display: flex; gap: 1rem; justify-content: center;">
+          <button type="submit" class="btn btn-accent" style="max-width: 200px;">
+            📦 Создать поставку
+          </button>
+          <button type="button" class="btn btn-danger" onclick="hideForm()" style="max-width: 200px;">
+            ❌ Отмена
+          </button>
+        </div>
+      </form>
+    </div>
 
     <div class="panel">
       <h2>📋 Список поставок</h2>
@@ -156,27 +202,54 @@
         
         <!-- Пагинация -->
         {% if total_pages > 1 %}
-          <div style="display: flex; justify-content: center; align-items: center; gap: 1rem; margin-top: 2rem; padding: 1rem; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border-color);">
-            <span style="color: var(--text-secondary); font-weight: 600;">
-              Страница {{ current_page }} из {{ total_pages }} ({{ total_deliveries }} поставок)
-            </span>
+          <div class="pagination-container">
+            <div class="pagination-info">
+              <span class="pagination-text">
+                Страница {{ current_page }} из {{ total_pages }} ({{ total_deliveries }} поставок)
+              </span>
+            </div>
             
-            <div style="display: flex; gap: 0.5rem;">
+            <div class="pagination">
+              <!-- Кнопка "Предыдущая" -->
               {% if has_prev %}
-                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset=0" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-                  ⏮️ Первая
-                </a>
-                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ prev_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-                  ⏪ Предыдущая
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ prev_offset }}" class="pagination-btn pagination-prev">
+                  ← Предыдущая
                 </a>
               {% endif %}
               
+              <!-- Первая страница -->
+              {% if current_page > 3 %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset=0" class="pagination-btn pagination-number">1</a>
+                {% if current_page > 4 %}
+                  <span class="pagination-ellipsis">...</span>
+                {% endif %}
+              {% endif %}
+              
+              <!-- Страницы вокруг текущей -->
+              {% if current_page > 1 %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ prev_offset }}" class="pagination-btn pagination-number">{{ current_page|add:"-1" }}</a>
+              {% endif %}
+              
+              <!-- Текущая страница -->
+              <span class="pagination-btn pagination-number pagination-current">{{ current_page }}</span>
+              
+              <!-- Следующая страница -->
+              {% if current_page < total_pages %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ next_offset }}" class="pagination-btn pagination-number">{{ current_page|add:"1" }}</a>
+              {% endif %}
+              
+              <!-- Последняя страница -->
+              {% if current_page < total_pages|add:"-2" %}
+                {% if current_page < total_pages|add:"-3" %}
+                  <span class="pagination-ellipsis">...</span>
+                {% endif %}
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ last_offset }}" class="pagination-btn pagination-number">{{ total_pages }}</a>
+              {% endif %}
+              
+              <!-- Кнопка "Следующая" -->
               {% if has_next %}
-                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ next_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-                  Следующая ⏩
-                </a>
-                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ last_offset }}" class="btn btn-secondary" style="padding: 0.5rem 1rem;">
-                  Последняя ⏭️
+                <a href="?{% if object_filter %}object_id={{ object_filter }}&{% endif %}limit={{ limit }}&offset={{ next_offset }}" class="pagination-btn pagination-next">
+                  Следующая →
                 </a>
               {% endif %}
             </div>
@@ -191,44 +264,6 @@
       {% endif %}
     </div>
 
-    <div class="panel">
-      <h2>➕ Добавить поставку</h2>
-      <form id="deliveryForm" style="max-width: 600px; margin: 0 auto;">
-        {% csrf_token %}
-        <div style="margin-bottom: 1.5rem;">
-          <label for="object_id" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Объект *</label>
-          <select id="object_id" name="object_id" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
-            <option value="">Выберите объект...</option>
-            {% for object in objects %}
-              <option value="{{ object.id }}">{{ object.name }} (ID: {{ object.id }})</option>
-            {% endfor %}
-          </select>
-        </div>
-        
-        <div style="margin-bottom: 1.5rem;">
-          <label for="work_item_id" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Работа *</label>
-          <select id="work_item_id" name="work_item_id" required disabled style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
-            <option value="">Сначала выберите объект</option>
-          </select>
-        </div>
-        
-        <div style="margin-bottom: 1.5rem;">
-          <label for="planned_date" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Планируемая дата *</label>
-          <input type="date" id="planned_date" name="planned_date" required style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem;">
-        </div>
-        
-        <div style="margin-bottom: 2rem;">
-          <label for="notes" style="display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--text-primary);">Заметки</label>
-          <textarea id="notes" name="notes" rows="4" placeholder="Дополнительная информация о поставке..." style="width: 100%; padding: 0.75rem; border: 2px solid var(--border-color); border-radius: 8px; background: var(--card-bg); color: var(--text-primary); font-size: 1rem; resize: vertical;"></textarea>
-        </div>
-        
-        <div style="display: flex; gap: 1rem; justify-content: center;">
-          <button type="submit" class="btn btn-accent" style="max-width: 200px;">
-            📦 Создать поставку
-          </button>
-        </div>
-      </form>
-    </div>
   </div>
   <!-- Модал заметки -->
   <div id="noteModal" class="modal" style="display:none;">
@@ -244,6 +279,30 @@
   </div>
 
   <script>
+    // Управление формой добавления поставки
+    const showFormBtn = document.getElementById('show-form-btn');
+    const form = document.getElementById('add-delivery-form');
+
+    showFormBtn.addEventListener('click', () => {
+      form.style.display = form.style.display === 'none' ? 'block' : 'none';
+      if (form.style.display === 'block') {
+        showFormBtn.innerHTML = '❌ Скрыть форму';
+        showFormBtn.classList.remove('btn-accent');
+        showFormBtn.classList.add('btn-danger');
+      } else {
+        showFormBtn.innerHTML = '✨ Добавить поставку';
+        showFormBtn.classList.remove('btn-danger');
+        showFormBtn.classList.add('btn-accent');
+      }
+    });
+
+    function hideForm() {
+      form.style.display = 'none';
+      showFormBtn.innerHTML = '✨ Добавить поставку';
+      showFormBtn.classList.remove('btn-danger');
+      showFormBtn.classList.add('btn-accent');
+    }
+
     // Загрузка работ при выборе объекта
     document.getElementById('object_id').addEventListener('change', async function() {
       const objectId = this.value;
@@ -390,6 +449,173 @@
   </script>
 
   <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .back-btn:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    @media (max-width: 1200px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+
+      .header-actions {
+        flex-direction: column;
+        gap: 0.5rem;
+      }
+    }
+
+    /* Стили для пагинации */
+    .pagination-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1rem;
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background: var(--card-bg);
+      border-radius: 16px;
+      border: 1px solid var(--border-color);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    }
+
+    .pagination-info {
+      margin-bottom: 0.5rem;
+    }
+
+    .pagination-text {
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+
+    .pagination {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .pagination-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 40px;
+      height: 40px;
+      padding: 0.5rem 0.75rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+
+    .pagination-btn:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    .pagination-btn.pagination-current {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    .pagination-btn.pagination-prev,
+    .pagination-btn.pagination-next {
+      min-width: auto;
+      padding: 0.5rem 1rem;
+      font-size: 0.85rem;
+    }
+
+    .pagination-btn.pagination-prev:hover,
+    .pagination-btn.pagination-next:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+    }
+
+    .pagination-ellipsis {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 40px;
+      height: 40px;
+      color: var(--text-muted);
+      font-weight: 600;
+      font-size: 1.2rem;
+    }
+
+    @media (max-width: 768px) {
+      .pagination-container {
+        padding: 1rem;
+      }
+
+      .pagination {
+        gap: 0.25rem;
+      }
+
+      .pagination-btn {
+        min-width: 35px;
+        height: 35px;
+        font-size: 0.8rem;
+      }
+
+      .pagination-btn.pagination-prev,
+      .pagination-btn.pagination-next {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.75rem;
+      }
+
+      .pagination-ellipsis {
+        width: 35px;
+        height: 35px;
+        font-size: 1rem;
+      }
+    }
+
     .modal {
       display: none;
       position: fixed;

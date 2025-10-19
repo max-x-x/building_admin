@@ -11,122 +11,23 @@
 <body>
   <div class="page">
     <div class="panel glow-effect">
-      <h1>📚 Система Памяток</h1>
+      <div class="header-content">
+        <h1>📚 Система Памяток</h1>
+        <div class="header-buttons">
+          <button class="btn btn-accent" id="show-form-btn">
+            ✨ Добавить методичку
+          </button>
+          <a href="{% url 'dashboard' %}" class="back-btn">
+            ← Вернуться в меню
+          </a>
+        </div>
+      </div>
       <p style="text-align: center; color: var(--text-secondary); font-size: 1.1rem; margin-bottom: 2rem;">
         Управление методическими материалами и документацией
       </p>
     </div>
 
-    <div class="panel">
-      <div class="memos-header">
-        <h2>📋 Методические материалы</h2>
-        <button class="btn btn-accent" id="show-form-btn">
-          ✨ Добавить методичку
-        </button>
-      </div>
-
-      <div class="memos-table-container">
-        <table class="memos-table">
-          <thead>
-            <tr>
-              <th>📄 Название</th>
-              <th>📝 Описание</th>
-              <th>🔗 Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for memo in api_memos %}
-            <tr class="memo-row" data-link="{{ memo.link }}">
-              <td class="memo-title">
-                <div class="title-content">
-                  <div class="title-icon">📄</div>
-                  <div class="title-text">{{ memo.title }}</div>
-                </div>
-              </td>
-              <td class="memo-description">
-                {{ memo.description }}
-              </td>
-              <td class="memo-actions">
-                <button class="btn btn-primary btn-small" onclick="openMemo('{{ memo.link }}')">
-                  🔗 Открыть
-                </button>
-                <button class="btn btn-warn btn-small" onclick="copyLink('{{ memo.link }}')">
-                  📋 Копировать ссылку
-                </button>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="3" class="empty-memos">
-                <div class="empty-state">
-                  <div class="empty-icon">📚</div>
-                  <div class="empty-title">Методички не найдены</div>
-                  <div class="empty-description">Добавьте первую методичку</div>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <div class="panel">
-      <h2>💾 Добавленные методички</h2>
-      <div class="memos-table-container">
-        <table class="memos-table">
-          <thead>
-            <tr>
-              <th>📄 Название</th>
-              <th>📝 Описание</th>
-              <th>📅 Дата создания</th>
-              <th>🔗 Действия</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for memo in memos_list %}
-            <tr class="memo-row" data-link="{{ memo.link }}">
-              <td class="memo-title">
-                <div class="title-content">
-                  <div class="title-icon">📄</div>
-                  <div class="title-text">{{ memo.title }}</div>
-                </div>
-              </td>
-              <td class="memo-description">
-                {{ memo.description }}
-              </td>
-              <td class="memo-date">
-                {{ memo.created_at|date:"d.m.Y H:i" }}
-              </td>
-              <td class="memo-actions">
-                <button class="btn btn-primary btn-small" onclick="openMemo('{{ memo.link }}')">
-                  🔗 Открыть
-                </button>
-                <button class="btn btn-warn btn-small" onclick="copyLink('{{ memo.link }}')">
-                  📋 Копировать
-                </button>
-                <button class="btn btn-danger btn-small" onclick="deleteMemo({{ memo.id }})">
-                  🗑️ Удалить
-                </button>
-              </td>
-            </tr>
-            {% empty %}
-            <tr>
-              <td colspan="4" class="empty-memos">
-                <div class="empty-state">
-                  <div class="empty-icon">📚</div>
-                  <div class="empty-title">Добавленные методички не найдены</div>
-                  <div class="empty-description">Создайте первую методичку</div>
-                </div>
-              </td>
-            </tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <form id="add-memo-form" method="post" class="memo-form">
+    <form id="add-memo-form" method="post" class="memo-form" enctype="multipart/form-data">
       {% csrf_token %}
       <h2>✨ Добавление новой методички</h2>
       
@@ -155,13 +56,24 @@
       </div>
 
       <div class="form-group">
-        <label for="link">🔗 Ссылка на методичку</label>
-        {{ form.link }}
-        {% if form.link.errors %}
-          <div class="field-error">{{ form.link.errors }}</div>
+        <label for="object_id">🏗️ Объект</label>
+        {{ form.object_id }}
+        {% if form.object_id.errors %}
+          <div class="field-error">{{ form.object_id.errors }}</div>
         {% endif %}
         <small style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; display: block;">
-          Введите полную ссылку на документ (например: https://example.com/manual.pdf)
+          Выберите объект, для которого создается методичка
+        </small>
+      </div>
+
+      <div class="form-group">
+        <label for="file">📎 Файл методички</label>
+        {{ form.file }}
+        {% if form.file.errors %}
+          <div class="field-error">{{ form.file.errors }}</div>
+        {% endif %}
+        <small style="color: var(--text-muted); font-size: 0.85rem; margin-top: 0.5rem; display: block;">
+          Выберите файл для загрузки (PDF, DOC, DOCX, TXT и другие документы)
         </small>
       </div>
 
@@ -175,14 +87,118 @@
       </div>
     </form>
 
-    <div class="nav-links">
-      <a href="{% url 'dashboard' %}" class="btn btn-primary">
-        ← Назад к дашборду
-      </a>
+
+    <div class="panel">
+      <h2>💾 Добавленные методички</h2>
+      <div class="memos-table-container">
+        <table class="memos-table">
+          <thead>
+            <tr>
+              <th>📄 Название</th>
+              <th>📝 Описание</th>
+              <th>🔗 Действия</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for memo in memos_list %}
+            <tr class="memo-row" data-link="{{ memo.file_url }}">
+              <td class="memo-title">
+                <div class="title-content">
+                  <div class="title-icon">📄</div>
+                  <div class="title-text">{{ memo.title }}</div>
+                </div>
+              </td>
+              <td class="memo-description">
+                {{ memo.description }}
+              </td>
+              <td class="memo-actions">
+                {% if memo.file_url %}
+                  <button class="btn btn-primary btn-small" onclick="openMemo('{{ memo.file_url }}')">
+                    🔗 Открыть
+                  </button>
+                  <button class="btn btn-warn btn-small" onclick="copyLink('{{ memo.file_url }}')">
+                    📋 Копировать ссылку
+                  </button>
+                {% else %}
+                  <span class="no-file">Файл не загружен</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% empty %}
+            <tr>
+              <td colspan="3" class="empty-memos">
+                <div class="empty-state">
+                  <div class="empty-icon">📚</div>
+                  <div class="empty-title">Добавленные методички не найдены</div>
+                  <div class="empty-description">Создайте первую методичку</div>
+                </div>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
     </div>
+
   </div>
 
   <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 1rem;
+    }
+
+    .header-buttons {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .back-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      background: var(--chip-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      color: var(--text-primary);
+      text-decoration: none;
+      font-weight: 600;
+      transition: all 0.3s ease;
+      font-size: 0.9rem;
+    }
+
+    .back-btn:hover {
+      background: var(--brand-orange);
+      color: white;
+      border-color: var(--brand-orange);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 138, 0, 0.3);
+    }
+
+    @media (max-width: 1200px) {
+      .header-content {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+      }
+      
+      .header-buttons {
+        flex-direction: column;
+        gap: 0.75rem;
+        width: 100%;
+      }
+      
+      .header-buttons .btn,
+      .header-buttons .back-btn {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+
     .memos-header {
       display: flex;
       justify-content: space-between;
@@ -269,6 +285,55 @@
       white-space: nowrap;
     }
 
+    .memo-object {
+      min-width: 150px;
+    }
+
+    .object-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .object-name {
+      font-weight: 600;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+    }
+
+    .object-id {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .memo-file {
+      min-width: 120px;
+    }
+
+    .file-info {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25rem;
+    }
+
+    .file-name {
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.9rem;
+      word-break: break-all;
+    }
+
+    .file-size {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .no-file {
+      color: var(--text-muted);
+      font-style: italic;
+      font-size: 0.9rem;
+    }
+
     .memo-actions {
       white-space: nowrap;
     }
@@ -304,7 +369,7 @@
 
     .memo-form {
       display: none;
-      margin-top: 2rem;
+      margin: 2rem 0;
       padding: 2rem;
       background: var(--chip-bg);
       border: 1px solid var(--border-color);
@@ -449,27 +514,45 @@
     document.getElementById('add-memo-form').addEventListener('submit', function(e) {
       const title = document.getElementById('id_title').value.trim();
       const description = document.getElementById('id_description').value.trim();
-      const link = document.getElementById('id_link').value.trim();
+      const objectId = document.getElementById('id_object_id').value;
+      const file = document.getElementById('id_file').files[0];
       
-      if (!title || !description || !link) {
+      if (!title || !description || !objectId || !file) {
         e.preventDefault();
-        alert('⚠️ Пожалуйста, заполните все поля!');
+        alert('⚠️ Пожалуйста, заполните все поля и выберите файл!');
         return false;
       }
 
-      // Простая валидация URL
-      try {
-        new URL(link);
-      } catch {
+      // Проверяем размер файла (максимум 50MB)
+      const maxSize = 50 * 1024 * 1024; // 50MB в байтах
+      if (file.size > maxSize) {
         e.preventDefault();
-        alert('⚠️ Пожалуйста, введите корректную ссылку!');
+        alert('⚠️ Размер файла не должен превышать 50MB!');
+        return false;
+      }
+
+      // Проверяем тип файла
+      const allowedTypes = [
+        'application/pdf',
+        'application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+        'application/vnd.ms-excel',
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-powerpoint',
+        'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+      ];
+      
+      if (!allowedTypes.includes(file.type)) {
+        e.preventDefault();
+        alert('⚠️ Пожалуйста, выберите файл поддерживаемого формата (PDF, DOC, DOCX, TXT, XLS, XLSX, PPT, PPTX)!');
         return false;
       }
       
       // Показываем индикатор загрузки
       const submitBtn = this.querySelector('button[type="submit"]');
       const originalText = submitBtn.innerHTML;
-      submitBtn.innerHTML = '<span class="loading"></span> Создание...';
+      submitBtn.innerHTML = '<span class="loading"></span> Загрузка...';
       submitBtn.disabled = true;
     });
   </script>
